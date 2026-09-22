@@ -21,6 +21,7 @@ function App(): React.JSX.Element {
 
   const [options, setOptions] = useState<ConvertOptions>({
     codec: 'prores_hq',
+    container: 'mov',
     includeAlpha: false,
     audioMode: 'copy',
     preserveMetadata: true,
@@ -72,6 +73,29 @@ function App(): React.JSX.Element {
     void window.api.getAppVersion().then(setAppVersion)
   }, [])
 
+  // Keep already-queued (not yet running/done) output paths in sync when the container changes.
+  useEffect(() => {
+    const container = options.container
+    const toUpdate = jobsRef.current.filter(
+      (j) => j.outputPath && j.status !== 'running' && j.status !== 'done'
+    )
+    if (toUpdate.length === 0) return
+    void Promise.all(
+      toUpdate.map(async (job) => {
+        const currentBase = job.outputPath.split(/[\\/]/).pop()?.replace(/\.(mov|mkv)$/i, '') ?? ''
+        const outputPath = await window.api.renameOutput(job.outputPath, currentBase, container)
+        return { id: job.id, outputPath }
+      })
+    ).then((updates) => {
+      setJobs((prev) =>
+        prev.map((j) => {
+          const update = updates.find((u) => u.id === j.id)
+          return update ? { ...j, outputPath: update.outputPath } : j
+        })
+      )
+    })
+  }, [options.container])
+
   const handleCheckForUpdates = useCallback(() => {
     void window.api.checkForUpdates()
   }, [])
@@ -96,7 +120,7 @@ function App(): React.JSX.Element {
       const dir = outputDir ?? job.inputPath.slice(0, job.inputPath.lastIndexOf(job.inputPath.includes('\\') ? '\\' : '/'))
       const [probe, outputPath] = await Promise.all([
         window.api.probeFile(job.inputPath),
-        window.api.suggestOutputPath(job.inputPath, dir, outputSuffix)
+        window.api.suggestOutputPath(job.inputPath, dir, outputSuffix, options.container)
       ])
       setJobs((prev) =>
         prev.map((j) =>
@@ -113,7 +137,7 @@ function App(): React.JSX.Element {
         )
       )
     }
-  }, [outputDir, outputSuffix])
+  }, [outputDir, outputSuffix, options.container])
 
   const handleAddFilesClick = useCallback(async () => {
     const paths = await window.api.openFileDialog()
@@ -141,12 +165,15 @@ function App(): React.JSX.Element {
     setJobs((prev) => prev.filter((j) => j.id !== id))
   }, [])
 
-  const handleRenameOutput = useCallback(async (id: string, newBaseName: string) => {
-    const job = jobsRef.current.find((j) => j.id === id)
-    if (!job || !newBaseName.trim()) return
-    const outputPath = await window.api.renameOutput(job.outputPath, newBaseName)
-    setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, outputPath } : j)))
-  }, [])
+  const handleRenameOutput = useCallback(
+    async (id: string, newBaseName: string) => {
+      const job = jobsRef.current.find((j) => j.id === id)
+      if (!job || !newBaseName.trim()) return
+      const outputPath = await window.api.renameOutput(job.outputPath, newBaseName, options.container)
+      setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, outputPath } : j)))
+    },
+    [options.container]
+  )
 
   const handleCancelJob = useCallback((id: string) => {
     cancelRequested.current.add(id)
@@ -200,7 +227,7 @@ function App(): React.JSX.Element {
             Video Converter
             {appVersion && <span className="app-version">v{appVersion}</span>}
           </h1>
-          <p className="subtitle">Batch re-encode to .mov — ProRes, DNxHR, H.264/H.265, and more</p>
+          <p className="subtitle">Batch re-encode to .mov or .mkv — ProRes, DNxHR, H.264/H.265, and more</p>
         </div>
         <div className="header-spacer" />
         <UpdateIndicator
@@ -256,7 +283,7 @@ function App(): React.JSX.Element {
                 placeholder="_converted"
                 spellCheck={false}
               />
-              .mov
+              .{options.container}
             </span>
           </div>
 

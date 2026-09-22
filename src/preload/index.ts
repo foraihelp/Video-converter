@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type {
   ConvertOptions,
   JobDonePayload,
+  OutputContainer,
   ProbeResult,
   ProgressPayload,
   StartJobRequest,
@@ -13,10 +14,19 @@ const api = {
   chooseOutputDir: (): Promise<string | null> => ipcRenderer.invoke('dialog:chooseOutputDir'),
   probeFile: (filePath: string): Promise<ProbeResult | null> =>
     ipcRenderer.invoke('probe:file', filePath),
-  suggestOutputPath: (inputPath: string, outputDir: string, suffix: string): Promise<string> =>
-    ipcRenderer.invoke('convert:suggestOutputPath', inputPath, outputDir, suffix),
-  renameOutput: (currentOutputPath: string, newBaseName: string): Promise<string> =>
-    ipcRenderer.invoke('convert:renameOutput', currentOutputPath, newBaseName),
+  suggestOutputPath: (
+    inputPath: string,
+    outputDir: string,
+    suffix: string,
+    container: OutputContainer
+  ): Promise<string> =>
+    ipcRenderer.invoke('convert:suggestOutputPath', inputPath, outputDir, suffix, container),
+  renameOutput: (
+    currentOutputPath: string,
+    newBaseName: string,
+    container: OutputContainer
+  ): Promise<string> =>
+    ipcRenderer.invoke('convert:renameOutput', currentOutputPath, newBaseName, container),
   startConversion: (request: StartJobRequest): Promise<void> =>
     ipcRenderer.invoke('convert:start', request),
   cancelConversion: (jobId: string): Promise<void> => ipcRenderer.invoke('convert:cancel', jobId),

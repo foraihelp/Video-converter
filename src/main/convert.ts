@@ -39,7 +39,7 @@ export async function runConversion(params: ConvertParams): Promise<ConvertRunHa
     ...buildVideoArgs(options),
     ...(hasAudio && options.audioMode !== 'none' ? buildAudioArgs(options.audioMode) : ['-an']),
     '-f',
-    'mov',
+    options.container === 'mkv' ? 'matroska' : 'mov',
     '-progress',
     'pipe:1',
     '-nostats',

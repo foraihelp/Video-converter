@@ -1,4 +1,4 @@
-import type { CodecDefinition, ConvertOptions, AudioMode } from '../../../shared/types'
+import type { CodecDefinition, ConvertOptions, AudioMode, OutputContainer } from '../../../shared/types'
 
 interface Props {
   options: ConvertOptions
@@ -29,6 +29,17 @@ function OptionsPanel({
   return (
     <div className="panel">
       <h2>Output Settings</h2>
+
+      <label className="field">
+        <span>Container</span>
+        <select
+          value={options.container}
+          onChange={(e) => update({ container: e.target.value as OutputContainer })}
+        >
+          <option value="mov">QuickTime (.mov)</option>
+          <option value="mkv">Matroska (.mkv)</option>
+        </select>
+      </label>
 
       <label className="field">
         <span>Codec</span>
@@ -112,13 +123,16 @@ function OptionsPanel({
         <span>Preserve metadata</span>
       </label>
 
-      <label className="field checkbox">
+      <label className={`field checkbox ${options.container === 'mkv' ? 'disabled' : ''}`}>
         <input
           type="checkbox"
           checked={options.preserveTimecode}
+          disabled={options.container === 'mkv'}
           onChange={(e) => update({ preserveTimecode: e.target.checked })}
         />
-        <span>Preserve timecode track</span>
+        <span>
+          Preserve timecode track {options.container === 'mkv' && '(QuickTime-only, not supported in .mkv)'}
+        </span>
       </label>
     </div>
   )

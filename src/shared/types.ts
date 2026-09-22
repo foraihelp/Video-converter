@@ -32,8 +32,11 @@ export interface CodecDefinition {
 
 export type AudioMode = 'copy' | 'pcm_s16le' | 'pcm_s24le' | 'aac' | 'none'
 
+export type OutputContainer = 'mov' | 'mkv'
+
 export interface ConvertOptions {
   codec: CodecId
+  container: OutputContainer
   includeAlpha: boolean
   audioMode: AudioMode
   preserveMetadata: boolean

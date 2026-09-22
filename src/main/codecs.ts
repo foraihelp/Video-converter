@@ -160,8 +160,9 @@ export function buildMapAndMetadataArgs(options: ConvertOptions, hasAudio: boole
     args.push('-map_metadata', '-1')
   }
 
-  if (options.preserveTimecode) {
+  if (options.preserveTimecode && options.container === 'mov') {
     // Carries the source QuickTime timecode ("tmcd") data track through untouched.
+    // Matroska has no equivalent track type, so this is skipped for .mkv output.
     args.push('-map', '0:d?', '-c:d', 'copy')
   }
 

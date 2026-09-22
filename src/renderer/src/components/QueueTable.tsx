@@ -27,9 +27,12 @@ function statusLabel(job: QueueJob): string {
   }
 }
 
+function outputFileName(outputPath: string): string {
+  return outputPath.split(/[\\/]/).pop() ?? outputPath
+}
+
 function outputBaseName(outputPath: string): string {
-  const file = outputPath.split(/[\\/]/).pop() ?? outputPath
-  return file.replace(/\.mov$/i, '')
+  return outputFileName(outputPath).replace(/\.(mov|mkv)$/i, '')
 }
 
 interface OutputNameProps {
@@ -77,7 +80,7 @@ function OutputName({ job, onRename }: OutputNameProps): React.JSX.Element {
         setEditing(true)
       }}
     >
-      {outputBaseName(job.outputPath)}.mov
+      {outputFileName(job.outputPath)}
       {!locked && (
         <svg
           className="queue-output-edit-icon"

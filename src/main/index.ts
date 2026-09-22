@@ -4,7 +4,7 @@ import { is } from './env'
 import { probeFile } from './probe'
 import { runConversion, type ConvertRunHandle } from './convert'
 import { setupAutoUpdater } from './updater'
-import type { ConvertOptions, ProbeResult, StartJobRequest } from '../shared/types'
+import type { ConvertOptions, OutputContainer, ProbeResult, StartJobRequest } from '../shared/types'
 
 const activeJobs = new Map<string, ConvertRunHandle>()
 
@@ -85,17 +85,20 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
 
   ipcMain.handle(
     'convert:suggestOutputPath',
-    (_evt, inputPath: string, outputDir: string, suffix: string) => {
+    (_evt, inputPath: string, outputDir: string, suffix: string, container: OutputContainer) => {
       const base = basename(inputPath, extname(inputPath))
-      return join(outputDir, `${sanitizeFileBaseName(base + suffix)}.mov`)
+      return join(outputDir, `${sanitizeFileBaseName(base + suffix)}.${container}`)
     }
   )
 
-  ipcMain.handle('convert:renameOutput', (_evt, currentOutputPath: string, newBaseName: string) => {
-    const dir = dirname(currentOutputPath)
-    const base = sanitizeFileBaseName(newBaseName.replace(/\.mov$/i, ''))
-    return join(dir, `${base}.mov`)
-  })
+  ipcMain.handle(
+    'convert:renameOutput',
+    (_evt, currentOutputPath: string, newBaseName: string, container: OutputContainer) => {
+      const dir = dirname(currentOutputPath)
+      const base = sanitizeFileBaseName(newBaseName.replace(/\.(mov|mkv)$/i, ''))
+      return join(dir, `${base}.${container}`)
+    }
+  )
 
   ipcMain.handle('convert:start', async (_evt, request: StartJobRequest) => {
     const { jobId, inputPath, outputPath, options } = request as {
