@@ -4,7 +4,8 @@ import type {
   JobDonePayload,
   ProbeResult,
   ProgressPayload,
-  StartJobRequest
+  StartJobRequest,
+  UpdateStatus
 } from '../shared/types'
 
 const api = {
@@ -28,6 +29,15 @@ const api = {
       callback(payload)
     ipcRenderer.on('convert:done', listener)
     return () => ipcRenderer.removeListener('convert:done', listener)
+  },
+  checkForUpdates: (): Promise<void> => ipcRenderer.invoke('update:check'),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
+  getUpdateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:getStatus'),
+  onUpdateStatus: (callback: (status: UpdateStatus) => void): (() => void) => {
+    const listener = (_evt: Electron.IpcRendererEvent, status: UpdateStatus): void =>
+      callback(status)
+    ipcRenderer.on('update:status', listener)
+    return () => ipcRenderer.removeListener('update:status', listener)
   }
 }
 

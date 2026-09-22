@@ -109,6 +109,64 @@ body {
   font-size: 12.5px;
 }
 
+.header-spacer {
+  flex: 1;
+}
+
+/* ---------- Update indicator ---------- */
+
+.update-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.update-pill-muted {
+  color: var(--text-muted);
+}
+
+.update-pill-accent {
+  border-color: rgba(79, 140, 255, 0.4);
+  color: var(--accent-b);
+  background: rgba(79, 140, 255, 0.1);
+}
+
+.update-pill-success {
+  border-color: rgba(47, 214, 127, 0.4);
+  color: var(--success);
+  background: var(--success-bg);
+}
+
+.update-pill-error {
+  border-color: rgba(255, 92, 114, 0.4);
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.update-spinner {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: update-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes update-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ---------- Layout ---------- */
 
 .layout {

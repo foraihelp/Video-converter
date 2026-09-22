@@ -16,6 +16,7 @@
     "dist:mac": "electron-vite build && electron-builder --mac"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "ffmpeg-static": "^5.2.0",
     "ffprobe-static": "^3.1.0",
     "react": "^18.3.1",
@@ -41,6 +42,11 @@
     "files": [
       "out/**/*"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "foraihelp",
+      "repo": "Video-converter"
+    },
     "asarUnpack": [
       "**/node_modules/ffmpeg-static/**",
       "**/node_modules/ffprobe-static/**"
@@ -49,7 +55,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico",

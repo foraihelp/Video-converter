@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ConvertOptions, QueueJob } from '../../shared/types'
+import type { ConvertOptions, QueueJob, UpdateStatus } from '../../shared/types'
 import { CODECS, getCodecDefinition } from '../../shared/codecDefinitions'
 import OptionsPanel from './components/OptionsPanel'
 import QueueTable from './components/QueueTable'
+import UpdateIndicator from './components/UpdateIndicator'
 import appIcon from './assets/app-icon.png'
 
 function makeId(): string {
@@ -14,6 +15,7 @@ function App(): React.JSX.Element {
   const [outputDir, setOutputDir] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' })
 
   const [options, setOptions] = useState<ConvertOptions>({
     codec: 'prores_hq',
@@ -56,6 +58,20 @@ function App(): React.JSX.Element {
       offProgress()
       offDone()
     }
+  }, [])
+
+  useEffect(() => {
+    void window.api.getUpdateStatus().then(setUpdateStatus)
+    const offStatus = window.api.onUpdateStatus(setUpdateStatus)
+    return offStatus
+  }, [])
+
+  const handleCheckForUpdates = useCallback(() => {
+    void window.api.checkForUpdates()
+  }, [])
+
+  const handleInstallUpdate = useCallback(() => {
+    void window.api.installUpdate()
   }, [])
 
   const addFiles = useCallback(async (paths: string[]) => {
@@ -170,6 +186,12 @@ function App(): React.JSX.Element {
           <h1>Video Converter</h1>
           <p className="subtitle">Batch re-encode to .mov — ProRes, DNxHR, H.264/H.265, and more</p>
         </div>
+        <div className="header-spacer" />
+        <UpdateIndicator
+          status={updateStatus}
+          onCheck={handleCheckForUpdates}
+          onInstall={handleInstallUpdate}
+        />
       </header>
 
       <div className="layout">

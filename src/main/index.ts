@@ -3,6 +3,7 @@ import { join, basename, extname } from 'node:path'
 import { is } from './env'
 import { probeFile } from './probe'
 import { runConversion, type ConvertRunHandle } from './convert'
+import { setupAutoUpdater } from './updater'
 import type { ConvertOptions, ProbeResult, StartJobRequest } from '../shared/types'
 
 const activeJobs = new Map<string, ConvertRunHandle>()
@@ -38,6 +39,7 @@ function createWindow(): void {
   }
 
   registerIpcHandlers(mainWindow)
+  setupAutoUpdater(mainWindow)
 }
 
 function registerIpcHandlers(mainWindow: BrowserWindow): void {
