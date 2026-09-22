@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join, basename, extname } from 'node:path'
+import { join, dirname, basename, extname } from 'node:path'
 import { is } from './env'
 import { probeFile } from './probe'
 import { runConversion, type ConvertRunHandle } from './convert'
@@ -7,6 +7,15 @@ import { setupAutoUpdater } from './updater'
 import type { ConvertOptions, ProbeResult, StartJobRequest } from '../shared/types'
 
 const activeJobs = new Map<string, ConvertRunHandle>()
+
+/** Strips characters Windows/macOS filesystems reject, and collapses empty results to a fallback. */
+function sanitizeFileBaseName(name: string): string {
+  const cleaned = name
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '')
+    .replace(/\.+$/, '')
+    .trim()
+  return cleaned.length > 0 ? cleaned : 'output'
+}
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -74,9 +83,18 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
     }
   })
 
-  ipcMain.handle('convert:suggestOutputPath', (_evt, inputPath: string, outputDir: string) => {
-    const base = basename(inputPath, extname(inputPath))
-    return join(outputDir, `${base}_converted.mov`)
+  ipcMain.handle(
+    'convert:suggestOutputPath',
+    (_evt, inputPath: string, outputDir: string, suffix: string) => {
+      const base = basename(inputPath, extname(inputPath))
+      return join(outputDir, `${sanitizeFileBaseName(base + suffix)}.mov`)
+    }
+  )
+
+  ipcMain.handle('convert:renameOutput', (_evt, currentOutputPath: string, newBaseName: string) => {
+    const dir = dirname(currentOutputPath)
+    const base = sanitizeFileBaseName(newBaseName.replace(/\.mov$/i, ''))
+    return join(dir, `${base}.mov`)
   })
 
   ipcMain.handle('convert:start', async (_evt, request: StartJobRequest) => {

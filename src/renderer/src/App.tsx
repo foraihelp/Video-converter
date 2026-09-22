@@ -13,6 +13,7 @@ function makeId(): string {
 function App(): React.JSX.Element {
   const [jobs, setJobs] = useState<QueueJob[]>([])
   const [outputDir, setOutputDir] = useState<string | null>(null)
+  const [outputSuffix, setOutputSuffix] = useState('_converted')
   const [isDragOver, setIsDragOver] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' })
@@ -90,7 +91,7 @@ function App(): React.JSX.Element {
       const dir = outputDir ?? job.inputPath.slice(0, job.inputPath.lastIndexOf(job.inputPath.includes('\\') ? '\\' : '/'))
       const [probe, outputPath] = await Promise.all([
         window.api.probeFile(job.inputPath),
-        window.api.suggestOutputPath(job.inputPath, dir)
+        window.api.suggestOutputPath(job.inputPath, dir, outputSuffix)
       ])
       setJobs((prev) =>
         prev.map((j) =>
@@ -107,7 +108,7 @@ function App(): React.JSX.Element {
         )
       )
     }
-  }, [outputDir])
+  }, [outputDir, outputSuffix])
 
   const handleAddFilesClick = useCallback(async () => {
     const paths = await window.api.openFileDialog()
@@ -133,6 +134,13 @@ function App(): React.JSX.Element {
 
   const handleRemoveJob = useCallback((id: string) => {
     setJobs((prev) => prev.filter((j) => j.id !== id))
+  }, [])
+
+  const handleRenameOutput = useCallback(async (id: string, newBaseName: string) => {
+    const job = jobsRef.current.find((j) => j.id === id)
+    if (!job || !newBaseName.trim()) return
+    const outputPath = await window.api.renameOutput(job.outputPath, newBaseName)
+    setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, outputPath } : j)))
   }, [])
 
   const handleCancelJob = useCallback((id: string) => {
@@ -225,7 +233,31 @@ function App(): React.JSX.Element {
             <button onClick={handleChooseOutputDir}>Choose&hellip;</button>
           </div>
 
-          <QueueTable jobs={jobs} onRemove={handleRemoveJob} onCancel={handleCancelJob} />
+          <div className="output-row">
+            <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            </svg>
+            <span className="output-label">Output name</span>
+            <span className="output-path output-name-preview">
+              &lt;filename&gt;
+              <input
+                className="output-suffix-input"
+                type="text"
+                value={outputSuffix}
+                onChange={(e) => setOutputSuffix(e.target.value)}
+                placeholder="_converted"
+                spellCheck={false}
+              />
+              .mov
+            </span>
+          </div>
+
+          <QueueTable
+            jobs={jobs}
+            onRemove={handleRemoveJob}
+            onCancel={handleCancelJob}
+            onRename={handleRenameOutput}
+          />
 
           <div className="actions-row">
             <button

@@ -270,6 +270,25 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.output-name-preview {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.output-suffix-input {
+  width: 130px;
+  padding: 4px 8px;
+  font-size: 12.5px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+}
+
 /* ---------- Queue ---------- */
 
 .queue-table {
@@ -315,7 +334,75 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  margin-bottom: 4px;
+}
+
+.queue-row-output {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.queue-output-arrow {
+  flex-shrink: 0;
+}
+
+.queue-output-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-output-name:hover:not(:disabled) {
+  background: var(--panel);
+  color: var(--text);
+  border-color: transparent;
+}
+
+.queue-output-name:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+
+.queue-output-edit-icon {
+  width: 11px;
+  height: 11px;
+  stroke: currentColor;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.queue-output-empty {
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.queue-output-input {
+  font-size: 12px;
+  font-family: inherit;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--accent-b);
+  background: var(--bg-elevated);
+  color: var(--text);
+  max-width: 260px;
+  flex: 1;
 }
 
 .queue-filename {

@@ -13,8 +13,10 @@ const api = {
   chooseOutputDir: (): Promise<string | null> => ipcRenderer.invoke('dialog:chooseOutputDir'),
   probeFile: (filePath: string): Promise<ProbeResult | null> =>
     ipcRenderer.invoke('probe:file', filePath),
-  suggestOutputPath: (inputPath: string, outputDir: string): Promise<string> =>
-    ipcRenderer.invoke('convert:suggestOutputPath', inputPath, outputDir),
+  suggestOutputPath: (inputPath: string, outputDir: string, suffix: string): Promise<string> =>
+    ipcRenderer.invoke('convert:suggestOutputPath', inputPath, outputDir, suffix),
+  renameOutput: (currentOutputPath: string, newBaseName: string): Promise<string> =>
+    ipcRenderer.invoke('convert:renameOutput', currentOutputPath, newBaseName),
   startConversion: (request: StartJobRequest): Promise<void> =>
     ipcRenderer.invoke('convert:start', request),
   cancelConversion: (jobId: string): Promise<void> => ipcRenderer.invoke('convert:cancel', jobId),
