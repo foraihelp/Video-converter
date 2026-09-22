@@ -1,7 +1,7 @@
 {
   "name": "video-converter",
   "productName": "Video Converter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Desktop app for re-encoding video files into .mov with selectable codecs, alpha, audio, and metadata handling.",
   "main": "./out/main/index.js",
   "author": "foraihelp",
