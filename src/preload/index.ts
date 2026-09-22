@@ -32,6 +32,7 @@ const api = {
     ipcRenderer.on('convert:done', listener)
     return () => ipcRenderer.removeListener('convert:done', listener)
   },
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
   checkForUpdates: (): Promise<void> => ipcRenderer.invoke('update:check'),
   installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
   getUpdateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:getStatus'),

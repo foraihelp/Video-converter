@@ -17,6 +17,7 @@ function App(): React.JSX.Element {
   const [isDragOver, setIsDragOver] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' })
+  const [appVersion, setAppVersion] = useState<string | null>(null)
 
   const [options, setOptions] = useState<ConvertOptions>({
     codec: 'prores_hq',
@@ -65,6 +66,10 @@ function App(): React.JSX.Element {
     void window.api.getUpdateStatus().then(setUpdateStatus)
     const offStatus = window.api.onUpdateStatus(setUpdateStatus)
     return offStatus
+  }, [])
+
+  useEffect(() => {
+    void window.api.getAppVersion().then(setAppVersion)
   }, [])
 
   const handleCheckForUpdates = useCallback(() => {
@@ -191,7 +196,10 @@ function App(): React.JSX.Element {
       <header className="app-header">
         <img className="app-logo" src={appIcon} alt="" />
         <div className="app-heading">
-          <h1>Video Converter</h1>
+          <h1>
+            Video Converter
+            {appVersion && <span className="app-version">v{appVersion}</span>}
+          </h1>
           <p className="subtitle">Batch re-encode to .mov — ProRes, DNxHR, H.264/H.265, and more</p>
         </div>
         <div className="header-spacer" />

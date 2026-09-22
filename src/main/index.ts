@@ -129,6 +129,8 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
     activeJobs.get(jobId)?.cancel()
     activeJobs.delete(jobId)
   })
+
+  ipcMain.handle('app:getVersion', () => app.getVersion())
 }
 
 app.whenReady().then(() => {
