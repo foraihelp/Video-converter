@@ -39,6 +39,9 @@
   "build": {
     "appId": "com.foraihelp.videoconverter",
     "productName": "Video Converter",
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "out/**/*"
     ],
