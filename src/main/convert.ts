@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { getFfmpegPath } from './ffmpegPaths'
-import { buildVideoArgs, buildAudioArgs, buildMapAndMetadataArgs } from './codecs'
+import { buildVideoArgs, buildAudioArgs, buildMapAndMetadataArgs, getContainerDefinition } from './codecs'
 import { probeFile } from './probe'
 import type { ConvertOptions } from '../shared/types'
 
@@ -37,9 +37,11 @@ export async function runConversion(params: ConvertParams): Promise<ConvertRunHa
     inputPath,
     ...buildMapAndMetadataArgs(options, hasAudio),
     ...buildVideoArgs(options),
-    ...(hasAudio && options.audioMode !== 'none' ? buildAudioArgs(options.audioMode) : ['-an']),
+    ...(hasAudio && options.audioCodec !== 'none'
+      ? buildAudioArgs(options.audioCodec, options.audioBitrateKbps)
+      : ['-an']),
     '-f',
-    options.container === 'mkv' ? 'matroska' : 'mov',
+    getContainerDefinition(options.container).muxer,
     '-progress',
     'pipe:1',
     '-nostats',

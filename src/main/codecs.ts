@@ -1,7 +1,16 @@
-import { getCodecDefinition } from '../shared/codecDefinitions'
-import type { ConvertOptions } from '../shared/types'
+import { getCodecDefinition, getAudioCodecDefinition } from '../shared/codecDefinitions'
+import type { AudioCodecId, ConvertOptions } from '../shared/types'
 
-export { CODECS, getCodecDefinition } from '../shared/codecDefinitions'
+export {
+  CODECS,
+  AUDIO_CODECS,
+  CONTAINERS,
+  getCodecDefinition,
+  getAudioCodecDefinition,
+  getContainerDefinition,
+  codecsForContainer,
+  audioCodecsForContainer
+} from '../shared/codecDefinitions'
 
 /**
  * Builds the ffmpeg video-codec-related args (codec, pixel format, profile, quality)
@@ -61,26 +70,17 @@ export function buildVideoArgs(options: ConvertOptions): string[] {
       args.push('-c:v', 'dnxhd', '-profile:v', 'dnxhr_444', '-pix_fmt', 'yuv444p10le')
       break
     case 'dnxhd': {
-      const bitrate = options.bitrateKbps ?? 36000
+      const bitrate = options.bitrateKbps ?? def.defaultBitrateKbps
       args.push('-c:v', 'dnxhd', '-b:v', `${bitrate}k`, '-pix_fmt', 'yuv422p')
       break
     }
     case 'h264': {
-      const crf = options.crf ?? 18
-      args.push(
-        '-c:v',
-        'libx264',
-        '-preset',
-        'slow',
-        '-crf',
-        String(crf),
-        '-pix_fmt',
-        'yuv420p'
-      )
+      const crf = options.crf ?? def.defaultCrf
+      args.push('-c:v', 'libx264', '-preset', 'slow', '-crf', String(crf), '-pix_fmt', 'yuv420p')
       break
     }
     case 'h265': {
-      const crf = options.crf ?? 20
+      const crf = options.crf ?? def.defaultCrf
       args.push(
         '-c:v',
         'libx265',
@@ -95,13 +95,59 @@ export function buildVideoArgs(options: ConvertOptions): string[] {
       )
       break
     }
+    case 'mpeg2': {
+      const bitrate = options.bitrateKbps ?? def.defaultBitrateKbps
+      args.push('-c:v', 'mpeg2video', '-b:v', `${bitrate}k`, '-pix_fmt', 'yuv420p')
+      break
+    }
     case 'mpeg4': {
-      const bitrate = options.bitrateKbps ?? 8000
+      const bitrate = options.bitrateKbps ?? def.defaultBitrateKbps
       args.push('-c:v', 'mpeg4', '-vtag', 'mp4v', '-b:v', `${bitrate}k`, '-pix_fmt', 'yuv420p')
       break
     }
+    case 'divx': {
+      const bitrate = options.bitrateKbps ?? def.defaultBitrateKbps
+      args.push('-c:v', 'mpeg4', '-vtag', 'DIVX', '-b:v', `${bitrate}k`, '-pix_fmt', 'yuv420p')
+      break
+    }
+    case 'xvid': {
+      const bitrate = options.bitrateKbps ?? def.defaultBitrateKbps
+      args.push('-c:v', 'libxvid', '-b:v', `${bitrate}k`, '-pix_fmt', 'yuv420p')
+      break
+    }
+    case 'wmv': {
+      const bitrate = options.bitrateKbps ?? def.defaultBitrateKbps
+      args.push('-c:v', 'wmv2', '-b:v', `${bitrate}k`, '-pix_fmt', 'yuv420p')
+      break
+    }
+    case 'theora': {
+      const bitrate = options.bitrateKbps ?? def.defaultBitrateKbps
+      args.push('-c:v', 'libtheora', '-b:v', `${bitrate}k`, '-pix_fmt', 'yuv420p')
+      break
+    }
+    case 'vp8': {
+      const crf = options.crf ?? def.defaultCrf
+      args.push('-c:v', 'libvpx', '-crf', String(crf), '-b:v', '0', '-pix_fmt', 'yuv420p')
+      break
+    }
+    case 'vp9': {
+      const crf = options.crf ?? def.defaultCrf
+      args.push(
+        '-c:v',
+        'libvpx-vp9',
+        '-crf',
+        String(crf),
+        '-b:v',
+        '0',
+        '-row-mt',
+        '1',
+        '-pix_fmt',
+        'yuv420p'
+      )
+      break
+    }
     case 'mjpeg': {
-      const bitrate = options.bitrateKbps ?? 15000
+      const bitrate = options.bitrateKbps ?? def.defaultBitrateKbps
       args.push('-c:v', 'mjpeg', '-b:v', `${bitrate}k`, '-pix_fmt', 'yuvj422p')
       break
     }
@@ -126,8 +172,11 @@ export function buildVideoArgs(options: ConvertOptions): string[] {
   return args
 }
 
-export function buildAudioArgs(audioMode: ConvertOptions['audioMode']): string[] {
-  switch (audioMode) {
+export function buildAudioArgs(audioCodec: AudioCodecId, bitrateKbps: number | undefined): string[] {
+  const def = getAudioCodecDefinition(audioCodec)
+  const bitrate = (): string[] => ['-b:a', `${bitrateKbps ?? def.defaultBitrateKbps}k`]
+
+  switch (audioCodec) {
     case 'copy':
       return ['-c:a', 'copy']
     case 'pcm_s16le':
@@ -135,12 +184,25 @@ export function buildAudioArgs(audioMode: ConvertOptions['audioMode']): string[]
     case 'pcm_s24le':
       return ['-c:a', 'pcm_s24le']
     case 'aac':
-      return ['-c:a', 'aac', '-b:a', '320k']
+      return ['-c:a', 'aac', ...bitrate()]
+    case 'mp3':
+      return ['-c:a', 'libmp3lame', ...bitrate()]
+    case 'flac':
+      return ['-c:a', 'flac']
+    case 'vorbis':
+      return ['-c:a', 'libvorbis', ...bitrate()]
+    case 'ac3':
+      return ['-c:a', 'ac3', ...bitrate()]
+    case 'dts':
+      // ffmpeg's DTS encoder is experimental; requires relaxing strict compliance.
+      return ['-c:a', 'dca', '-strict', '-2', ...bitrate()]
+    case 'wma':
+      return ['-c:a', 'wmav2', ...bitrate()]
     case 'none':
       return ['-an']
     default: {
-      const exhaustive: never = audioMode
-      throw new Error(`Unhandled audio mode: ${exhaustive}`)
+      const exhaustive: never = audioCodec
+      throw new Error(`Unhandled audio codec: ${exhaustive}`)
     }
   }
 }
@@ -150,7 +212,7 @@ export function buildMapAndMetadataArgs(options: ConvertOptions, hasAudio: boole
 
   // Map video, and audio only if present + requested.
   args.push('-map', '0:v:0')
-  if (hasAudio && options.audioMode !== 'none') {
+  if (hasAudio && options.audioCodec !== 'none') {
     args.push('-map', '0:a?')
   }
 

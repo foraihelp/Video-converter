@@ -1,8 +1,8 @@
 {
   "name": "video-converter",
   "productName": "Video Converter",
-  "version": "0.1.4",
-  "description": "Desktop app for re-encoding video files into .mov or .mkv with selectable codecs, alpha, audio, and metadata handling.",
+  "version": "0.1.5",
+  "description": "Desktop app for re-encoding video files across containers (MOV/MKV/MP4/AVI/TS/M2TS/WebM) with selectable video/audio codecs, alpha, and metadata handling.",
   "main": "./out/main/index.js",
   "author": "foraihelp",
   "private": true,

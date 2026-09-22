@@ -1,30 +1,41 @@
-import type { CodecDefinition, ConvertOptions, AudioMode, OutputContainer } from '../../../shared/types'
+import type { CodecDefinition, ConvertOptions, OutputContainer } from '../../../shared/types'
+import { CONTAINERS, codecsForContainer, audioCodecsForContainer } from '../../../shared/codecDefinitions'
 
 interface Props {
   options: ConvertOptions
   onChange: (options: ConvertOptions) => void
-  codecs: CodecDefinition[]
-  selectedCodecSupportsAlpha: boolean
-  selectedCodecQualityControl: 'crf' | 'bitrate' | null
 }
 
 const GROUP_ORDER: CodecDefinition['group'][] = [
   'ProRes',
   'DNx',
   'Delivery (H.26x)',
+  'Web (VPx)',
   'Legacy / Compatibility',
   'Uncompressed / Lossless'
 ]
 
-function OptionsPanel({
-  options,
-  onChange,
-  codecs,
-  selectedCodecSupportsAlpha,
-  selectedCodecQualityControl
-}: Props): React.JSX.Element {
+function OptionsPanel({ options, onChange }: Props): React.JSX.Element {
   const update = (patch: Partial<ConvertOptions>): void => onChange({ ...options, ...patch })
-  const selectedDef = codecs.find((c) => c.id === options.codec)
+
+  const availableCodecs = codecsForContainer(options.container)
+  const availableAudio = audioCodecsForContainer(options.container)
+  const selectedCodecDef = availableCodecs.find((c) => c.id === options.codec)
+  const selectedAudioDef = availableAudio.find((a) => a.id === options.audioCodec)
+  const [crfMin, crfMax] = selectedCodecDef?.crfRange ?? [0, 51]
+  const crfValue = options.crf ?? selectedCodecDef?.defaultCrf ?? crfMin
+  const bitrateValue = options.bitrateKbps ?? selectedCodecDef?.defaultBitrateKbps ?? 8000
+  const audioBitrateValue = options.audioBitrateKbps ?? selectedAudioDef?.defaultBitrateKbps ?? 192
+
+  const handleContainerChange = (container: OutputContainer): void => {
+    const validCodecs = codecsForContainer(container)
+    const validAudio = audioCodecsForContainer(container)
+    const codec = validCodecs.some((c) => c.id === options.codec) ? options.codec : validCodecs[0].id
+    const audioCodec = validAudio.some((a) => a.id === options.audioCodec)
+      ? options.audioCodec
+      : validAudio[0].id
+    update({ container, codec, audioCodec })
+  }
 
   return (
     <div className="panel">
@@ -32,12 +43,12 @@ function OptionsPanel({
 
       <label className="field">
         <span>Container</span>
-        <select
-          value={options.container}
-          onChange={(e) => update({ container: e.target.value as OutputContainer })}
-        >
-          <option value="mov">QuickTime (.mov)</option>
-          <option value="mkv">Matroska (.mkv)</option>
+        <select value={options.container} onChange={(e) => handleContainerChange(e.target.value as OutputContainer)}>
+          {CONTAINERS.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.label}
+            </option>
+          ))}
         </select>
       </label>
 
@@ -47,52 +58,54 @@ function OptionsPanel({
           value={options.codec}
           onChange={(e) => update({ codec: e.target.value as ConvertOptions['codec'] })}
         >
-          {GROUP_ORDER.map((group) => (
-            <optgroup key={group} label={group}>
-              {codecs
-                .filter((c) => c.group === group)
-                .map((c) => (
+          {GROUP_ORDER.map((group) => {
+            const inGroup = availableCodecs.filter((c) => c.group === group)
+            if (inGroup.length === 0) return null
+            return (
+              <optgroup key={group} label={group}>
+                {inGroup.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.label}
                   </option>
                 ))}
-            </optgroup>
-          ))}
+              </optgroup>
+            )
+          })}
         </select>
       </label>
-      {selectedDef && <p className="hint">{selectedDef.description}</p>}
+      {selectedCodecDef && <p className="hint">{selectedCodecDef.description}</p>}
 
-      <label className={`field checkbox ${selectedCodecSupportsAlpha ? '' : 'disabled'}`}>
+      <label className={`field checkbox ${selectedCodecDef?.supportsAlpha ? '' : 'disabled'}`}>
         <input
           type="checkbox"
           checked={options.includeAlpha}
-          disabled={!selectedCodecSupportsAlpha}
+          disabled={!selectedCodecDef?.supportsAlpha}
           onChange={(e) => update({ includeAlpha: e.target.checked })}
         />
-        <span>Include alpha channel {!selectedCodecSupportsAlpha && '(not supported by this codec)'}</span>
+        <span>Include alpha channel {!selectedCodecDef?.supportsAlpha && '(not supported by this codec)'}</span>
       </label>
 
-      {selectedCodecQualityControl === 'crf' && (
+      {selectedCodecDef?.qualityControl === 'crf' && (
         <label className="field">
-          <span>Quality (CRF, lower = better): {options.crf}</span>
+          <span>Quality (CRF, lower = better): {crfValue}</span>
           <input
             type="range"
-            min={0}
-            max={51}
-            value={options.crf ?? 18}
+            min={crfMin}
+            max={crfMax}
+            value={crfValue}
             onChange={(e) => update({ crf: Number(e.target.value) })}
           />
         </label>
       )}
 
-      {selectedCodecQualityControl === 'bitrate' && (
+      {selectedCodecDef?.qualityControl === 'bitrate' && (
         <label className="field">
           <span>Bitrate (kbps)</span>
           <input
             type="number"
             min={500}
             step={500}
-            value={options.bitrateKbps ?? 8000}
+            value={bitrateValue}
             onChange={(e) => update({ bitrateKbps: Number(e.target.value) })}
           />
         </label>
@@ -101,18 +114,32 @@ function OptionsPanel({
       <hr />
 
       <label className="field">
-        <span>Audio</span>
+        <span>Audio codec</span>
         <select
-          value={options.audioMode}
-          onChange={(e) => update({ audioMode: e.target.value as AudioMode })}
+          value={options.audioCodec}
+          onChange={(e) => update({ audioCodec: e.target.value as ConvertOptions['audioCodec'] })}
         >
-          <option value="copy">Copy (no re-encode, lossless)</option>
-          <option value="pcm_s16le">Uncompressed PCM 16-bit</option>
-          <option value="pcm_s24le">Uncompressed PCM 24-bit</option>
-          <option value="aac">AAC 320kbps</option>
-          <option value="none">No audio</option>
+          {availableAudio.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.label}
+            </option>
+          ))}
         </select>
       </label>
+      {selectedAudioDef?.description && <p className="hint">{selectedAudioDef.description}</p>}
+
+      {selectedAudioDef?.hasBitrate && (
+        <label className="field">
+          <span>Audio bitrate (kbps)</span>
+          <input
+            type="number"
+            min={64}
+            step={32}
+            value={audioBitrateValue}
+            onChange={(e) => update({ audioBitrateKbps: Number(e.target.value) })}
+          />
+        </label>
+      )}
 
       <label className="field checkbox">
         <input
@@ -123,15 +150,15 @@ function OptionsPanel({
         <span>Preserve metadata</span>
       </label>
 
-      <label className={`field checkbox ${options.container === 'mkv' ? 'disabled' : ''}`}>
+      <label className={`field checkbox ${options.container === 'mov' ? '' : 'disabled'}`}>
         <input
           type="checkbox"
           checked={options.preserveTimecode}
-          disabled={options.container === 'mkv'}
+          disabled={options.container !== 'mov'}
           onChange={(e) => update({ preserveTimecode: e.target.checked })}
         />
         <span>
-          Preserve timecode track {options.container === 'mkv' && '(QuickTime-only, not supported in .mkv)'}
+          Preserve timecode track {options.container !== 'mov' && '(QuickTime-only)'}
         </span>
       </label>
     </div>

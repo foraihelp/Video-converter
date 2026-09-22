@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ConvertOptions, QueueJob, UpdateStatus } from '../../shared/types'
-import { CODECS, getCodecDefinition } from '../../shared/codecDefinitions'
+import { getCodecDefinition } from '../../shared/codecDefinitions'
 import OptionsPanel from './components/OptionsPanel'
 import QueueTable from './components/QueueTable'
 import UpdateIndicator from './components/UpdateIndicator'
@@ -23,11 +23,10 @@ function App(): React.JSX.Element {
     codec: 'prores_hq',
     container: 'mov',
     includeAlpha: false,
-    audioMode: 'copy',
+    audioCodec: 'copy',
     preserveMetadata: true,
     preserveTimecode: true,
-    crf: 18,
-    bitrateKbps: 36000
+    crf: 18
   })
 
   const jobsRef = useRef(jobs)
@@ -82,7 +81,8 @@ function App(): React.JSX.Element {
     if (toUpdate.length === 0) return
     void Promise.all(
       toUpdate.map(async (job) => {
-        const currentBase = job.outputPath.split(/[\\/]/).pop()?.replace(/\.(mov|mkv)$/i, '') ?? ''
+        const currentBase =
+          job.outputPath.split(/[\\/]/).pop()?.replace(/\.(mov|mkv|mp4|avi|ts|m2ts|webm)$/i, '') ?? ''
         const outputPath = await window.api.renameOutput(job.outputPath, currentBase, container)
         return { id: job.id, outputPath }
       })
@@ -216,7 +216,6 @@ function App(): React.JSX.Element {
   }, [options])
 
   const pendingCount = jobs.filter((j) => j.status === 'pending' || j.status === 'error').length
-  const selectedCodec = CODECS.find((c) => c.id === options.codec)
 
   return (
     <div className="app">
@@ -227,7 +226,10 @@ function App(): React.JSX.Element {
             Video Converter
             {appVersion && <span className="app-version">v{appVersion}</span>}
           </h1>
-          <p className="subtitle">Batch re-encode to .mov or .mkv — ProRes, DNxHR, H.264/H.265, and more</p>
+          <p className="subtitle">
+            Batch re-encode into MOV, MKV, MP4, AVI, TS, M2TS, or WebM — ProRes, DNxHR, H.264/H.265,
+            VP8/VP9, and more
+          </p>
         </div>
         <div className="header-spacer" />
         <UpdateIndicator
@@ -321,13 +323,7 @@ function App(): React.JSX.Element {
         </div>
 
         <div className="right-column">
-          <OptionsPanel
-            options={options}
-            onChange={setOptions}
-            codecs={CODECS}
-            selectedCodecSupportsAlpha={selectedCodec?.supportsAlpha ?? false}
-            selectedCodecQualityControl={selectedCodec?.qualityControl ?? null}
-          />
+          <OptionsPanel options={options} onChange={setOptions} />
         </div>
       </div>
     </div>

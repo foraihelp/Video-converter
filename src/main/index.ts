@@ -4,7 +4,10 @@ import { is } from './env'
 import { probeFile } from './probe'
 import { runConversion, type ConvertRunHandle } from './convert'
 import { setupAutoUpdater } from './updater'
+import { getContainerDefinition } from './codecs'
 import type { ConvertOptions, OutputContainer, ProbeResult, StartJobRequest } from '../shared/types'
+
+const KNOWN_EXTENSIONS = /\.(mov|mkv|mp4|avi|ts|m2ts|webm)$/i
 
 const activeJobs = new Map<string, ConvertRunHandle>()
 
@@ -59,7 +62,7 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
       filters: [
         {
           name: 'Video files',
-          extensions: ['mov', 'mp4', 'mxf', 'avi', 'mkv', 'm4v', 'webm', 'wmv', 'mts', 'm2ts']
+          extensions: ['mov', 'mp4', 'mxf', 'avi', 'mkv', 'm4v', 'webm', 'wmv', 'mts', 'm2ts', 'ts']
         },
         { name: 'All files', extensions: ['*'] }
       ]
@@ -87,7 +90,8 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
     'convert:suggestOutputPath',
     (_evt, inputPath: string, outputDir: string, suffix: string, container: OutputContainer) => {
       const base = basename(inputPath, extname(inputPath))
-      return join(outputDir, `${sanitizeFileBaseName(base + suffix)}.${container}`)
+      const ext = getContainerDefinition(container).extension
+      return join(outputDir, `${sanitizeFileBaseName(base + suffix)}.${ext}`)
     }
   )
 
@@ -95,8 +99,9 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
     'convert:renameOutput',
     (_evt, currentOutputPath: string, newBaseName: string, container: OutputContainer) => {
       const dir = dirname(currentOutputPath)
-      const base = sanitizeFileBaseName(newBaseName.replace(/\.(mov|mkv)$/i, ''))
-      return join(dir, `${base}.${container}`)
+      const base = sanitizeFileBaseName(newBaseName.replace(KNOWN_EXTENSIONS, ''))
+      const ext = getContainerDefinition(container).extension
+      return join(dir, `${base}.${ext}`)
     }
   )
 

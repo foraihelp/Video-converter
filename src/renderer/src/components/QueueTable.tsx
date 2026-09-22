@@ -32,7 +32,7 @@ function outputFileName(outputPath: string): string {
 }
 
 function outputBaseName(outputPath: string): string {
-  return outputFileName(outputPath).replace(/\.(mov|mkv)$/i, '')
+  return outputFileName(outputPath).replace(/\.(mov|mkv|mp4|avi|ts|m2ts|webm)$/i, '')
 }
 
 interface OutputNameProps {

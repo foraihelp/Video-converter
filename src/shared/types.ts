@@ -13,37 +13,90 @@ export type CodecId =
   | 'dnxhd'
   | 'h264'
   | 'h265'
+  | 'mpeg2'
   | 'mpeg4'
+  | 'divx'
+  | 'xvid'
+  | 'wmv'
+  | 'theora'
+  | 'vp8'
+  | 'vp9'
   | 'mjpeg'
   | 'uncompressed_8bit'
   | 'uncompressed_10bit'
   | 'animation_qtrle'
   | 'png'
 
+export type OutputContainer = 'mov' | 'mkv' | 'mp4' | 'avi' | 'ts' | 'm2ts' | 'webm'
+
 export interface CodecDefinition {
   id: CodecId
   label: string
-  group: 'ProRes' | 'DNx' | 'Delivery (H.26x)' | 'Legacy / Compatibility' | 'Uncompressed / Lossless'
+  group:
+    | 'ProRes'
+    | 'DNx'
+    | 'Delivery (H.26x)'
+    | 'Web (VPx)'
+    | 'Legacy / Compatibility'
+    | 'Uncompressed / Lossless'
   supportsAlpha: boolean
   /** Whether this codec benefits from / requires a quality or bitrate control exposed in the UI */
   qualityControl?: 'crf' | 'bitrate' | null
+  /** CRF slider bounds, when qualityControl is 'crf'. */
+  crfRange?: [number, number]
+  /** Default CRF value, when qualityControl is 'crf'. Used by both the UI and the ffmpeg args builder. */
+  defaultCrf?: number
+  /** Default bitrate in kbps, when qualityControl is 'bitrate'. Used by both the UI and the ffmpeg args builder. */
+  defaultBitrateKbps?: number
+  /** Containers this codec can legally be muxed into. */
+  containers: OutputContainer[]
   description: string
 }
 
-export type AudioMode = 'copy' | 'pcm_s16le' | 'pcm_s24le' | 'aac' | 'none'
+export type AudioCodecId =
+  | 'copy'
+  | 'aac'
+  | 'mp3'
+  | 'flac'
+  | 'vorbis'
+  | 'ac3'
+  | 'dts'
+  | 'wma'
+  | 'pcm_s16le'
+  | 'pcm_s24le'
+  | 'none'
 
-export type OutputContainer = 'mov' | 'mkv'
+export interface AudioCodecDefinition {
+  id: AudioCodecId
+  label: string
+  /** Whether this needs a bitrate control exposed in the UI. */
+  hasBitrate: boolean
+  /** Default bitrate in kbps, when hasBitrate is true. Used by both the UI and the ffmpeg args builder. */
+  defaultBitrateKbps?: number
+  /** Containers this audio codec can legally be muxed into. */
+  containers: OutputContainer[]
+  description?: string
+}
+
+export interface ContainerDefinition {
+  id: OutputContainer
+  label: string
+  extension: string
+  /** ffmpeg -f muxer name (differs from the file extension for ts/m2ts). */
+  muxer: string
+}
 
 export interface ConvertOptions {
   codec: CodecId
   container: OutputContainer
   includeAlpha: boolean
-  audioMode: AudioMode
+  audioCodec: AudioCodecId
+  audioBitrateKbps?: number
   preserveMetadata: boolean
   preserveTimecode: boolean
-  /** 0-51 for h264/h265 (lower = better), ignored for other codecs */
+  /** For crf-controlled codecs (range varies by codec, see CodecDefinition.crfRange). */
   crf?: number
-  /** kbps, used for mpeg4/mjpeg bitrate-controlled codecs */
+  /** kbps, for bitrate-controlled video codecs. */
   bitrateKbps?: number
 }
 
