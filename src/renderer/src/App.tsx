@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ConvertOptions, QueueJob, UpdateStatus } from '../../shared/types'
+import type { ConvertOptions, QueueJob, TrimRange, UpdateStatus } from '../../shared/types'
 import { getCodecDefinition } from '../../shared/codecDefinitions'
 import OptionsPanel from './components/OptionsPanel'
+import PlayerModal from './components/PlayerModal'
 import QueueTable from './components/QueueTable'
 import UpdateIndicator from './components/UpdateIndicator'
 import appIcon from './assets/app-icon.png'
@@ -18,8 +19,10 @@ function App(): React.JSX.Element {
   const [isRunning, setIsRunning] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' })
   const [appVersion, setAppVersion] = useState<string | null>(null)
+  const [playerJobId, setPlayerJobId] = useState<string | null>(null)
 
   const [options, setOptions] = useState<ConvertOptions>({
+    processingMode: 'reencode',
     codec: 'prores_hq',
     container: 'mov',
     includeAlpha: false,
@@ -175,6 +178,10 @@ function App(): React.JSX.Element {
     [options.container]
   )
 
+  const handleTrimChange = useCallback((id: string, trim: TrimRange | undefined) => {
+    setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, trim } : j)))
+  }, [])
+
   const handleCancelJob = useCallback((id: string) => {
     cancelRequested.current.add(id)
     void window.api.cancelConversion(id)
@@ -196,7 +203,8 @@ function App(): React.JSX.Element {
         jobId: job.id,
         inputPath: job.inputPath,
         outputPath: job.outputPath,
-        options: jobOptions
+        options: jobOptions,
+        trim: job.trim
       })
 
       // Wait for this job's terminal state before starting the next one.
@@ -216,6 +224,7 @@ function App(): React.JSX.Element {
   }, [options])
 
   const pendingCount = jobs.filter((j) => j.status === 'pending' || j.status === 'error').length
+  const playerJob = jobs.find((j) => j.id === playerJobId) ?? null
 
   return (
     <div className="app">
@@ -227,8 +236,8 @@ function App(): React.JSX.Element {
             {appVersion && <span className="app-version">v{appVersion}</span>}
           </h1>
           <p className="subtitle">
-            Batch re-encode into MOV, MKV, MP4, AVI, TS, M2TS, or WebM — ProRes, DNxHR, H.264/H.265,
-            VP8/VP9, and more
+            Convert, trim, and preview video — MOV, MKV, MP4, AVI, TS, M2TS, WebM; ProRes, DNxHR,
+            H.264/H.265, VP8/VP9, and more
           </p>
         </div>
         <div className="header-spacer" />
@@ -294,6 +303,8 @@ function App(): React.JSX.Element {
             onRemove={handleRemoveJob}
             onCancel={handleCancelJob}
             onRename={handleRenameOutput}
+            onOpenPlayer={setPlayerJobId}
+            onClearTrim={(id) => handleTrimChange(id, undefined)}
           />
 
           <div className="actions-row">
@@ -326,6 +337,16 @@ function App(): React.JSX.Element {
           <OptionsPanel options={options} onChange={setOptions} />
         </div>
       </div>
+
+      {playerJob && (
+        <PlayerModal
+          key={playerJob.id}
+          job={playerJob}
+          locked={playerJob.status === 'running' || playerJob.status === 'done'}
+          onClose={() => setPlayerJobId(null)}
+          onApply={handleTrimChange}
+        />
+      )}
     </div>
   )
 }

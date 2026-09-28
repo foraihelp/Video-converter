@@ -1,4 +1,9 @@
-import type { CodecDefinition, ConvertOptions, OutputContainer } from '../../../shared/types'
+import type {
+  CodecDefinition,
+  ConvertOptions,
+  OutputContainer,
+  ProcessingMode
+} from '../../../shared/types'
 import { CONTAINERS, codecsForContainer, audioCodecsForContainer } from '../../../shared/codecDefinitions'
 
 interface Props {
@@ -27,6 +32,13 @@ function OptionsPanel({ options, onChange }: Props): React.JSX.Element {
   const bitrateValue = options.bitrateKbps ?? selectedCodecDef?.defaultBitrateKbps ?? 8000
   const audioBitrateValue = options.audioBitrateKbps ?? selectedAudioDef?.defaultBitrateKbps ?? 192
 
+  const copyMode = options.processingMode === 'copy'
+
+  const handleModeChange = (processingMode: ProcessingMode): void => {
+    // Matroska accepts almost any source codec, so it's the safest container for a stream copy.
+    update(processingMode === 'copy' ? { processingMode, container: 'mkv' } : { processingMode })
+  }
+
   const handleContainerChange = (container: OutputContainer): void => {
     const validCodecs = codecsForContainer(container)
     const validAudio = audioCodecsForContainer(container)
@@ -42,6 +54,24 @@ function OptionsPanel({ options, onChange }: Props): React.JSX.Element {
       <h2>Output Settings</h2>
 
       <label className="field">
+        <span>Processing</span>
+        <select
+          value={options.processingMode}
+          onChange={(e) => handleModeChange(e.target.value as ProcessingMode)}
+        >
+          <option value="reencode">Convert (re-encode with the codecs below)</option>
+          <option value="copy">Fast copy (no re-encode, no quality loss)</option>
+        </select>
+      </label>
+      {copyMode && (
+        <p className="hint">
+          Video and audio are copied untouched, so it&rsquo;s fast and lossless. A trim starts at the
+          nearest keyframe before your start time. The source codecs must be supported by the
+          container &mdash; Matroska accepts almost anything.
+        </p>
+      )}
+
+      <label className="field">
         <span>Container</span>
         <select value={options.container} onChange={(e) => handleContainerChange(e.target.value as OutputContainer)}>
           {CONTAINERS.map((c) => (
@@ -52,6 +82,8 @@ function OptionsPanel({ options, onChange }: Props): React.JSX.Element {
         </select>
       </label>
 
+      {!copyMode && (
+        <>
       <label className="field">
         <span>Codec</span>
         <select
@@ -139,6 +171,8 @@ function OptionsPanel({ options, onChange }: Props): React.JSX.Element {
             onChange={(e) => update({ audioBitrateKbps: Number(e.target.value) })}
           />
         </label>
+      )}
+        </>
       )}
 
       <label className="field checkbox">

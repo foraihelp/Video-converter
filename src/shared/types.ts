@@ -86,7 +86,17 @@ export interface ContainerDefinition {
   muxer: string
 }
 
+/** 'reencode' encodes with the selected codecs; 'copy' remuxes streams untouched (fast, lossless). */
+export type ProcessingMode = 'reencode' | 'copy'
+
+/** Portion of the source to keep. Either bound may be omitted (start of video / end of video). */
+export interface TrimRange {
+  startSec?: number
+  endSec?: number
+}
+
 export interface ConvertOptions {
+  processingMode: ProcessingMode
   codec: CodecId
   container: OutputContainer
   includeAlpha: boolean
@@ -111,6 +121,8 @@ export interface QueueJob {
   durationSec?: number
   hasAudio?: boolean
   hasAlpha?: boolean
+  /** Validated trim range to apply, if any. */
+  trim?: TrimRange
 }
 
 export interface ProbeResult {
@@ -138,6 +150,7 @@ export interface StartJobRequest {
   inputPath: string
   outputPath: string
   options: ConvertOptions
+  trim?: TrimRange
 }
 
 export type UpdateStatus =

@@ -1,5 +1,9 @@
-import { getCodecDefinition, getAudioCodecDefinition } from '../shared/codecDefinitions'
-import type { AudioCodecId, ConvertOptions } from '../shared/types'
+import {
+  getCodecDefinition,
+  getAudioCodecDefinition,
+  getContainerDefinition
+} from '../shared/codecDefinitions'
+import type { AudioCodecId, ConvertOptions, TrimRange } from '../shared/types'
 
 export {
   CODECS,
@@ -207,12 +211,57 @@ export function buildAudioArgs(audioCodec: AudioCodecId, bitrateKbps: number | u
   }
 }
 
+/**
+ * Full ffmpeg argument list for one job (everything except the executable path).
+ * -ss goes before -i so seeking is fast; -t (a duration) is used rather than -to so the
+ * end point is unambiguous when combined with an input-side seek.
+ */
+export function buildConvertArgs(params: {
+  inputPath: string
+  outputPath: string
+  options: ConvertOptions
+  hasAudio: boolean
+  trim?: TrimRange
+}): string[] {
+  const { inputPath, outputPath, options, hasAudio, trim } = params
+  const copyMode = options.processingMode === 'copy'
+  const audioCodec = resolveAudioCodec(options)
+  const startSec = trim?.startSec ?? 0
+  const endSec = trim?.endSec
+
+  return [
+    '-y',
+    ...(startSec > 0 ? ['-ss', startSec.toFixed(3)] : []),
+    '-i',
+    inputPath,
+    ...(endSec !== undefined ? ['-t', (endSec - startSec).toFixed(3)] : []),
+    ...buildMapAndMetadataArgs(options, hasAudio),
+    ...(copyMode ? ['-c:v', 'copy'] : buildVideoArgs(options)),
+    ...(hasAudio && audioCodec !== 'none'
+      ? buildAudioArgs(audioCodec, options.audioBitrateKbps)
+      : ['-an']),
+    // Keeps stream-copied cuts starting at zero when the cut point falls between keyframes.
+    ...(copyMode ? ['-avoid_negative_ts', 'make_zero'] : []),
+    '-f',
+    getContainerDefinition(options.container).muxer,
+    '-progress',
+    'pipe:1',
+    '-nostats',
+    outputPath
+  ]
+}
+
+/** In fast-copy mode audio is always passed through untouched, whatever the dropdown says. */
+export function resolveAudioCodec(options: ConvertOptions): AudioCodecId {
+  return options.processingMode === 'copy' ? 'copy' : options.audioCodec
+}
+
 export function buildMapAndMetadataArgs(options: ConvertOptions, hasAudio: boolean): string[] {
   const args: string[] = []
 
   // Map video, and audio only if present + requested.
   args.push('-map', '0:v:0')
-  if (hasAudio && options.audioCodec !== 'none') {
+  if (hasAudio && resolveAudioCodec(options) !== 'none') {
     args.push('-map', '0:a?')
   }
 

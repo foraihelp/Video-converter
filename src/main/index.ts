@@ -5,7 +5,8 @@ import { probeFile } from './probe'
 import { runConversion, type ConvertRunHandle } from './convert'
 import { setupAutoUpdater } from './updater'
 import { getContainerDefinition } from './codecs'
-import type { ConvertOptions, OutputContainer, ProbeResult, StartJobRequest } from '../shared/types'
+import { createPreviewProxy, registerPreviewFile, startPreviewServer, stopPreview } from './preview'
+import type { OutputContainer, ProbeResult, StartJobRequest } from '../shared/types'
 
 const KNOWN_EXTENSIONS = /\.(mov|mkv|mp4|avi|ts|m2ts|webm)$/i
 
@@ -106,17 +107,13 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
   )
 
   ipcMain.handle('convert:start', async (_evt, request: StartJobRequest) => {
-    const { jobId, inputPath, outputPath, options } = request as {
-      jobId: string
-      inputPath: string
-      outputPath: string
-      options: ConvertOptions
-    }
+    const { jobId, inputPath, outputPath, options, trim } = request
 
     const handle = await runConversion({
       inputPath,
       outputPath,
       options,
+      trim,
       onProgress: (fraction) => {
         mainWindow.webContents.send('convert:progress', { jobId, progress: fraction })
       },
@@ -139,15 +136,31 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
   })
 
   ipcMain.handle('app:getVersion', () => app.getVersion())
+
+  ipcMain.handle('preview:register', (_evt, filePath: string) => registerPreviewFile(filePath))
+
+  ipcMain.handle(
+    'preview:proxy',
+    async (_evt, filePath: string): Promise<{ ok: true; url: string } | { ok: false; error: string }> => {
+      try {
+        return { ok: true, url: await createPreviewProxy(filePath) }
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    }
+  )
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await startPreviewServer()
   createWindow()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+app.on('will-quit', stopPreview)
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

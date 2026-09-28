@@ -7,6 +7,15 @@ Desktop app (Windows/macOS) for batch re-encoding video files with selectable co
 - Electron + React + TypeScript, built with `electron-vite`
 - FFmpeg (bundled via `ffmpeg-static` / `ffprobe-static`, no separate install needed)
 
+## Video player and cutter
+
+Each queued file has a **Preview / Trim** button that opens a built-in player. Play the video, use **Set start here** / **Set end here** at the current position (or type times like `90`, `1:30`, `00:01:30.5`), then **Apply trim**. Only that portion is converted, with its audio. Leaving Start or End blank means "from the beginning" or "to the end".
+
+- **Convert mode** (default) re-encodes the cut with the codec/container you picked, so it's frame-accurate and works with any input codec.
+- **Fast copy mode** (Processing → Fast copy) copies video and audio untouched: no re-encode, no quality loss, much faster. The cut starts at the nearest keyframe before your start time, and the source codecs must be supported by the container (Matroska accepts almost anything).
+
+Chromium can't decode ProRes, DNxHR, MPEG-2, WMV, DivX, AC-3 and similar, so for those the player automatically builds a small H.264/AAC preview (same timeline, so trim times still line up). The conversion always uses your original file. Previews are temporary and deleted when the app quits.
+
 ## Supported output containers
 
 `.mov`, `.mkv`, `.mp4`, `.avi`, `.ts`, `.m2ts`, `.webm`

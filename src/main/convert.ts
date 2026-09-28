@@ -1,8 +1,9 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { getFfmpegPath } from './ffmpegPaths'
-import { buildVideoArgs, buildAudioArgs, buildMapAndMetadataArgs, getContainerDefinition } from './codecs'
+import { buildConvertArgs } from './codecs'
 import { probeFile } from './probe'
-import type { ConvertOptions } from '../shared/types'
+import { trimmedDuration } from '../shared/time'
+import type { ConvertOptions, TrimRange } from '../shared/types'
 
 export interface ConvertRunHandle {
   cancel: () => void
@@ -12,6 +13,7 @@ interface ConvertParams {
   inputPath: string
   outputPath: string
   options: ConvertOptions
+  trim?: TrimRange
   onProgress: (fractionDone: number) => void
   onDone: (result: { success: boolean; error?: string }) => void
 }
@@ -25,28 +27,13 @@ function parseTimeToSeconds(timeStr: string): number {
 }
 
 export async function runConversion(params: ConvertParams): Promise<ConvertRunHandle> {
-  const { inputPath, outputPath, options, onProgress, onDone } = params
+  const { inputPath, outputPath, options, trim, onProgress, onDone } = params
 
   const probe = await probeFile(inputPath).catch(() => null)
   const hasAudio = probe?.hasAudio ?? true
-  const durationSec = probe?.durationSec ?? 0
+  const durationSec = trimmedDuration(trim, probe?.durationSec ?? 0)
 
-  const args: string[] = [
-    '-y',
-    '-i',
-    inputPath,
-    ...buildMapAndMetadataArgs(options, hasAudio),
-    ...buildVideoArgs(options),
-    ...(hasAudio && options.audioCodec !== 'none'
-      ? buildAudioArgs(options.audioCodec, options.audioBitrateKbps)
-      : ['-an']),
-    '-f',
-    getContainerDefinition(options.container).muxer,
-    '-progress',
-    'pipe:1',
-    '-nostats',
-    outputPath
-  ]
+  const args = buildConvertArgs({ inputPath, outputPath, options, hasAudio, trim })
 
   const ffmpegPath = getFfmpegPath()
   let child: ChildProcessWithoutNullStreams

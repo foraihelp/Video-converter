@@ -43,6 +43,12 @@ const api = {
     return () => ipcRenderer.removeListener('convert:done', listener)
   },
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
+  registerPreview: (filePath: string): Promise<string> =>
+    ipcRenderer.invoke('preview:register', filePath),
+  createPreviewProxy: (
+    filePath: string
+  ): Promise<{ ok: true; url: string } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('preview:proxy', filePath),
   checkForUpdates: (): Promise<void> => ipcRenderer.invoke('update:check'),
   installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
   getUpdateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:getStatus'),
