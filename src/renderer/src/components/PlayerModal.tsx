@@ -257,10 +257,12 @@ function PlayerModal({ job, locked, onClose, onApply }: Props): React.JSX.Elemen
 
         <div className="pm-footer">
           <button
-            disabled={locked || (!startText && !endText)}
+            disabled={locked || (!startText && !endText && !job.trim)}
             onClick={() => {
               setStartText('')
               setEndText('')
+              onApply(job.id, undefined)
+              onClose()
             }}
           >
             Clear trim

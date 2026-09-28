@@ -66,14 +66,20 @@ function OptionsPanel({ options, onChange }: Props): React.JSX.Element {
       {copyMode && (
         <p className="hint">
           Video and audio are copied untouched, so it&rsquo;s fast and lossless. A trim starts at the
-          nearest keyframe before your start time. The source codecs must be supported by the
-          container &mdash; Matroska accepts almost anything.
+          nearest keyframe before your start time. The container is locked to Matroska (.mkv), since
+          it tolerates a raw stream copy from almost any source &mdash; other containers are far more
+          likely to reject the result or produce a broken file.
         </p>
       )}
 
       <label className="field">
         <span>Container</span>
-        <select value={options.container} onChange={(e) => handleContainerChange(e.target.value as OutputContainer)}>
+        <select
+          value={options.container}
+          disabled={copyMode}
+          title={copyMode ? 'Locked to Matroska while Fast copy is on' : undefined}
+          onChange={(e) => handleContainerChange(e.target.value as OutputContainer)}
+        >
           {CONTAINERS.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
