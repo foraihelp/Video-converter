@@ -157,8 +157,8 @@ function App(): React.JSX.Element {
       e.preventDefault()
       setIsDragOver(false)
       const paths = Array.from(e.dataTransfer.files)
-        .map((f) => (f as File & { path?: string }).path)
-        .filter((p): p is string => !!p)
+        .map((f) => window.api.getPathForFile(f))
+        .filter((p) => !!p)
       void addFiles(paths)
     },
     [addFiles]

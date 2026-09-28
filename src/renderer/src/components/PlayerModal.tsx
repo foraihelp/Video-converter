@@ -148,8 +148,14 @@ function PlayerModal({ job, locked, onClose, onApply }: Props): React.JSX.Elemen
               controls
               preload="metadata"
               onLoadedMetadata={(e) => {
-                const d = e.currentTarget.duration
-                if (Number.isFinite(d)) setMediaDuration(d)
+                const video = e.currentTarget
+                // For codecs Chromium can't decode (ProRes, DNxHR, ...) it still opens the file and
+                // plays the audio without raising an error, so the only sign is a picture-less video.
+                if (video.videoWidth === 0 && !usingProxyRef.current) {
+                  void switchToCompatiblePreview()
+                  return
+                }
+                if (Number.isFinite(video.duration)) setMediaDuration(video.duration)
                 setPhase('ready')
               }}
               onTimeUpdate={handleTimeUpdate}

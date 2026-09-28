@@ -59,8 +59,8 @@ function OptionsPanel({ options, onChange }: Props): React.JSX.Element {
           value={options.processingMode}
           onChange={(e) => handleModeChange(e.target.value as ProcessingMode)}
         >
-          <option value="reencode">Convert (re-encode with the codecs below)</option>
-          <option value="copy">Fast copy (no re-encode, no quality loss)</option>
+          <option value="reencode">Convert (re-encode)</option>
+          <option value="copy">Fast copy (lossless)</option>
         </select>
       </label>
       {copyMode && (

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type {
   ConvertOptions,
   JobDonePayload,
@@ -10,6 +10,8 @@ import type {
 } from '../shared/types'
 
 const api = {
+  /** Electron 32 removed File.path; this is its replacement for dropped files. */
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file),
   openFileDialog: (): Promise<string[]> => ipcRenderer.invoke('dialog:openFiles'),
   chooseOutputDir: (): Promise<string | null> => ipcRenderer.invoke('dialog:chooseOutputDir'),
   probeFile: (filePath: string): Promise<ProbeResult | null> =>
