@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ConvertOptions, QueueJob, TrimRange, UpdateStatus } from '../../shared/types'
 import { getCodecDefinition } from '../../shared/codecDefinitions'
 import OptionsPanel from './components/OptionsPanel'
+import Downloader from './components/Downloader'
 import PlayerModal from './components/PlayerModal'
 import QueueTable from './components/QueueTable'
 import UpdateIndicator from './components/UpdateIndicator'
@@ -20,6 +21,7 @@ function App(): React.JSX.Element {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' })
   const [appVersion, setAppVersion] = useState<string | null>(null)
   const [playerJobId, setPlayerJobId] = useState<string | null>(null)
+  const [view, setView] = useState<'convert' | 'download'>('convert')
 
   const [options, setOptions] = useState<ConvertOptions>({
     processingMode: 'reencode',
@@ -240,6 +242,20 @@ function App(): React.JSX.Element {
             H.264/H.265, VP8/VP9, and more
           </p>
         </div>
+        <nav className="tabs" aria-label="Sections">
+          <button
+            className={`tab ${view === 'convert' ? 'active' : ''}`}
+            onClick={() => setView('convert')}
+          >
+            Convert
+          </button>
+          <button
+            className={`tab ${view === 'download' ? 'active' : ''}`}
+            onClick={() => setView('download')}
+          >
+            Download
+          </button>
+        </nav>
         <div className="header-spacer" />
         <UpdateIndicator
           status={updateStatus}
@@ -248,7 +264,15 @@ function App(): React.JSX.Element {
         />
       </header>
 
-      <div className="layout">
+      <Downloader
+        hidden={view !== 'download'}
+        onSendToConverter={(paths) => {
+          void addFiles(paths)
+          setView('convert')
+        }}
+      />
+
+      <div className={`layout ${view !== 'convert' ? 'view-hidden' : ''}`}>
         <div className="left-column">
           <div
             className={`dropzone ${isDragOver ? 'dropzone-active' : ''}`}

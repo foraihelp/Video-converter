@@ -153,6 +153,65 @@ export interface StartJobRequest {
   trim?: TrimRange
 }
 
+export type DownloadFormatId =
+  | 'best'
+  | '2160p'
+  | '1440p'
+  | '1080p'
+  | '720p'
+  | '480p'
+  | '360p'
+  | 'audio-mp3'
+  | 'audio-best'
+
+export interface VideoInfo {
+  url: string
+  id: string
+  title: string
+  uploader?: string
+  durationSec?: number
+  /** Inlined as a data: URL so the renderer's CSP doesn't have to allow remote images. */
+  thumbnail?: string
+  /** Distinct video heights on offer, tallest first. */
+  heights: number[]
+  isLive: boolean
+}
+
+export interface DownloadRequest {
+  id: string
+  url: string
+  format: DownloadFormatId
+  outputDir: string
+}
+
+export interface DownloadProgress {
+  id: string
+  stage: 'downloading' | 'processing'
+  /** 0-100 across all streams (video + audio count as one). */
+  percent: number
+  speed?: string
+  eta?: string
+}
+
+export interface DownloadDone {
+  id: string
+  success: boolean
+  filePath?: string
+  error?: string
+}
+
+export interface DownloaderStatus {
+  ready: boolean
+  version?: string
+}
+
+export interface DownloaderSetupEvent {
+  step: string
+  percent?: number
+}
+
+export type DownloaderResult<T> = ({ ok: true } & T) | { ok: false; error: string }
+
 export type UpdateStatus =
   | { state: 'idle' }
   | { state: 'unsupported' }

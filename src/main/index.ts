@@ -6,6 +6,7 @@ import { runConversion, type ConvertRunHandle } from './convert'
 import { setupAutoUpdater } from './updater'
 import { getContainerDefinition } from './codecs'
 import { createPreviewProxy, registerPreviewFile, startPreviewServer, stopPreview } from './preview'
+import { setupDownloader } from './ytdlp'
 import type { OutputContainer, ProbeResult, StartJobRequest } from '../shared/types'
 
 const KNOWN_EXTENSIONS = /\.(mov|mkv|mp4|avi|ts|m2ts|webm)$/i
@@ -153,6 +154,7 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
 
 app.whenReady().then(async () => {
   await startPreviewServer()
+  setupDownloader(() => BrowserWindow.getAllWindows()[0] ?? null)
   createWindow()
 
   app.on('activate', () => {

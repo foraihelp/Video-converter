@@ -1,13 +1,27 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type {
   ConvertOptions,
+  DownloadDone,
+  DownloadProgress,
+  DownloadRequest,
+  DownloaderSetupEvent,
+  DownloaderStatus,
   JobDonePayload,
   OutputContainer,
   ProbeResult,
   ProgressPayload,
   StartJobRequest,
-  UpdateStatus
+  UpdateStatus,
+  VideoInfo
 } from '../shared/types'
+
+type Listener<T> = (payload: T) => void
+
+function subscribe<T>(channel: string, callback: Listener<T>): () => void {
+  const listener = (_evt: Electron.IpcRendererEvent, payload: T): void => callback(payload)
+  ipcRenderer.on(channel, listener)
+  return () => ipcRenderer.removeListener(channel, listener)
+}
 
 const api = {
   /** Electron 32 removed File.path; this is its replacement for dropped files. */
@@ -45,6 +59,22 @@ const api = {
     return () => ipcRenderer.removeListener('convert:done', listener)
   },
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
+  downloader: {
+    getStatus: (): Promise<DownloaderStatus> => ipcRenderer.invoke('dl:status'),
+    setup: (): Promise<{ ok: true; version: string } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('dl:setup'),
+    update: (): Promise<{ ok: true; version: string } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('dl:update'),
+    getInfo: (url: string): Promise<{ ok: true; info: VideoInfo } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('dl:info', url),
+    start: (request: DownloadRequest): Promise<void> => ipcRenderer.invoke('dl:start', request),
+    cancel: (id: string): Promise<void> => ipcRenderer.invoke('dl:cancel', id),
+    getDefaultDir: (): Promise<string> => ipcRenderer.invoke('dl:defaultDir'),
+    showInFolder: (filePath: string): Promise<void> => ipcRenderer.invoke('shell:showItem', filePath),
+    onSetupProgress: (cb: Listener<DownloaderSetupEvent>) => subscribe('dl:setup-progress', cb),
+    onProgress: (cb: Listener<DownloadProgress>) => subscribe('dl:progress', cb),
+    onDone: (cb: Listener<DownloadDone>) => subscribe('dl:done', cb)
+  },
   registerPreview: (filePath: string): Promise<string> =>
     ipcRenderer.invoke('preview:register', filePath),
   createPreviewProxy: (

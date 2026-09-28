@@ -545,6 +545,190 @@ body {
   border-radius: 999px;
 }
 
+/* ---------- Tabs ---------- */
+
+.view-hidden {
+  display: none !important;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: 26px;
+  padding: 3px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+}
+
+.tab {
+  padding: 6px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+}
+
+.tab:hover:not(:disabled) {
+  background: transparent;
+  color: var(--text);
+}
+
+.tab.active {
+  color: #fff;
+  background: var(--accent-gradient);
+}
+
+.tab.active:hover:not(:disabled) {
+  background: var(--accent-gradient);
+}
+
+/* ---------- Downloader ---------- */
+
+.dl {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 14px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.dl-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+}
+
+.dl-setup {
+  max-width: 620px;
+  align-items: flex-start;
+}
+
+.dl-setup h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.dl-setup p,
+.dl-setup ul {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.dl-setup ul {
+  padding-left: 18px;
+}
+
+.dl-setup .queue-progress-track {
+  width: 100%;
+}
+
+.dl-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.dl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dl-input {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.dl-input:focus {
+  border-color: var(--accent-b);
+}
+
+.dl-info {
+  display: flex;
+  gap: 16px;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.dl-thumb {
+  width: 240px;
+  height: 135px;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: #000;
+  border-radius: var(--radius-md);
+}
+
+.dl-info-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dl-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.dl-muted {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dl-folder {
+  align-self: stretch;
+}
+
+.dl-folder-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dl-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.dl-note {
+  margin: -6px 0 0;
+  color: var(--text-faint);
+}
+
 /* ---------- Player / trim dialog ---------- */
 
 .pm-backdrop {
