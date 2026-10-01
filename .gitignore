@@ -7,5 +7,3 @@ release/
 .env
 .claude/
 *.tsbuildinfo
-__pycache__/
-.pytest_cache/

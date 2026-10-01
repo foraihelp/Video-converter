@@ -58,7 +58,3 @@ npm run dist:mac   # macOS DMG
 ```bash
 npm run typecheck
 ```
-
-## AI & VFX daily video digest
-
-A separate Python tool in [`video-digest/`](video-digest/README.md) emails a daily digest of new Nuke, Silhouette, Mocha and ComfyUI videos via GitHub Actions. See that README for setup.
