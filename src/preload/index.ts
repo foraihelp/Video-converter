@@ -6,6 +6,8 @@ import type {
   DownloadRequest,
   DownloaderSetupEvent,
   DownloaderStatus,
+  EffectsPreviewRequest,
+  EffectsPreviewResult,
   JobDonePayload,
   OutputContainer,
   ProbeResult,
@@ -28,6 +30,9 @@ const api = {
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
   openFileDialog: (): Promise<string[]> => ipcRenderer.invoke('dialog:openFiles'),
   chooseOutputDir: (): Promise<string | null> => ipcRenderer.invoke('dialog:chooseOutputDir'),
+  chooseOverlayImage: (): Promise<string | null> => ipcRenderer.invoke('dialog:openImage'),
+  renderEffectsPreview: (request: EffectsPreviewRequest): Promise<EffectsPreviewResult> =>
+    ipcRenderer.invoke('compose:preview', request),
   probeFile: (filePath: string): Promise<ProbeResult | null> =>
     ipcRenderer.invoke('probe:file', filePath),
   suggestOutputPath: (

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ConvertOptions, QueueJob, TrimRange, UpdateStatus } from '../../shared/types'
 import { getCodecDefinition } from '../../shared/codecDefinitions'
+import { DEFAULT_EFFECTS, hasActiveEffects, validateEffects } from '../../shared/compose'
 import OptionsPanel from './components/OptionsPanel'
 import Downloader from './components/Downloader'
+import EffectsDialog from './components/EffectsDialog'
 import PlayerModal from './components/PlayerModal'
 import QueueTable from './components/QueueTable'
 import UpdateIndicator from './components/UpdateIndicator'
@@ -21,10 +23,12 @@ function App(): React.JSX.Element {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' })
   const [appVersion, setAppVersion] = useState<string | null>(null)
   const [playerJobId, setPlayerJobId] = useState<string | null>(null)
+  const [effectsOpen, setEffectsOpen] = useState(false)
   const [view, setView] = useState<'convert' | 'download'>('convert')
 
   const [options, setOptions] = useState<ConvertOptions>({
     processingMode: 'reencode',
+    effects: DEFAULT_EFFECTS,
     codec: 'prores_hq',
     container: 'mov',
     includeAlpha: false,
@@ -136,7 +140,9 @@ function App(): React.JSX.Element {
                 outputPath,
                 durationSec: probe?.durationSec,
                 hasAudio: probe?.hasAudio,
-                hasAlpha: probe?.hasAlpha
+                hasAlpha: probe?.hasAlpha,
+                width: probe?.width,
+                height: probe?.height
               }
             : j
         )
@@ -227,6 +233,18 @@ function App(): React.JSX.Element {
 
   const pendingCount = jobs.filter((j) => j.status === 'pending' || j.status === 'error').length
   const playerJob = jobs.find((j) => j.id === playerJobId) ?? null
+  // Effects are checked against every queued video's real size, not just the settings in isolation.
+  const effectsError = ((): string | undefined => {
+    if (options.processingMode === 'copy' || !hasActiveEffects(options.effects)) return undefined
+    const settingsProblem = validateEffects(options.effects)
+    if (settingsProblem) return settingsProblem
+    for (const job of jobs) {
+      if (job.status === 'done' || job.status === 'running' || !job.width || !job.height) continue
+      const problem = validateEffects(options.effects, { w: job.width, h: job.height })
+      if (problem) return `${job.inputName}: ${problem}`
+    }
+    return undefined
+  })()
 
   return (
     <div className="app">
@@ -334,7 +352,7 @@ function App(): React.JSX.Element {
           <div className="actions-row">
             <button
               className="primary"
-              disabled={pendingCount === 0 || isRunning}
+              disabled={pendingCount === 0 || isRunning || !!effectsError}
               onClick={() => void runQueue()}
             >
               <svg
@@ -358,9 +376,24 @@ function App(): React.JSX.Element {
         </div>
 
         <div className="right-column">
-          <OptionsPanel options={options} onChange={setOptions} />
+          <OptionsPanel
+            options={options}
+            onChange={setOptions}
+            onEditEffects={() => setEffectsOpen(true)}
+            effectsError={effectsError}
+          />
         </div>
       </div>
+
+      {effectsOpen && (
+        <EffectsDialog
+          effects={options.effects}
+          codec={options.codec}
+          jobs={jobs}
+          onChange={(effects) => setOptions((prev) => ({ ...prev, effects }))}
+          onClose={() => setEffectsOpen(false)}
+        />
+      )}
 
       {playerJob && (
         <PlayerModal

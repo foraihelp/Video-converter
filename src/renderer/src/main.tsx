@@ -8,6 +8,10 @@ import '@fontsource/inter-tight/latin-700.css'
 import App from './App'
 import './styles.css'
 
+// A file dropped anywhere that isn't a drop target must not make the window open it.
+window.addEventListener('dragover', (e) => e.preventDefault())
+window.addEventListener('drop', (e) => e.preventDefault())
+
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <App />

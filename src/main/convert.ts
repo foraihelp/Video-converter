@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { getFfmpegPath } from './ffmpegPaths'
 import { buildConvertArgs } from './codecs'
+import { prepareCompose } from './compose'
 import { probeFile } from './probe'
 import { trimmedDuration } from '../shared/time'
 import type { ConvertOptions, TrimRange } from '../shared/types'
@@ -33,7 +34,20 @@ export async function runConversion(params: ConvertParams): Promise<ConvertRunHa
   const hasAudio = probe?.hasAudio ?? true
   const durationSec = trimmedDuration(trim, probe?.durationSec ?? 0)
 
-  const args = buildConvertArgs({ inputPath, outputPath, options, hasAudio, trim })
+  const prepared = prepareCompose(options, probe)
+  if ('error' in prepared) {
+    onDone({ success: false, error: prepared.error })
+    return { cancel: () => {} }
+  }
+
+  const args = buildConvertArgs({
+    inputPath,
+    outputPath,
+    options,
+    hasAudio,
+    trim,
+    compose: prepared.plan
+  })
 
   const ffmpegPath = getFfmpegPath()
   let child: ChildProcessWithoutNullStreams

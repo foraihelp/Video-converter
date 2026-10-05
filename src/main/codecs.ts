@@ -3,7 +3,8 @@ import {
   getAudioCodecDefinition,
   getContainerDefinition
 } from '../shared/codecDefinitions'
-import type { AudioCodecId, ConvertOptions, TrimRange } from '../shared/types'
+import { buildComposePlan, hasActiveEffects, type ComposePlan, type Size } from '../shared/compose'
+import type { AudioCodecId, CodecId, ConvertOptions, TrimRange } from '../shared/types'
 
 export {
   CODECS,
@@ -222,20 +223,27 @@ export function buildConvertArgs(params: {
   options: ConvertOptions
   hasAudio: boolean
   trim?: TrimRange
+  /** Resize / reformat / blur / overlay, already built for this source. Null when none applies. */
+  compose?: ComposePlan | null
 }): string[] {
-  const { inputPath, outputPath, options, hasAudio, trim } = params
+  const { inputPath, outputPath, options, hasAudio, trim, compose } = params
   const copyMode = options.processingMode === 'copy'
   const audioCodec = resolveAudioCodec(options)
   const startSec = trim?.startSec ?? 0
   const endSec = trim?.endSec
+  const filtered = !copyMode && !!compose?.graph
 
   return [
     '-y',
     ...(startSec > 0 ? ['-ss', startSec.toFixed(3)] : []),
     '-i',
     inputPath,
+    // Input 1 is the overlay image. It must come before -t, which would otherwise be read as an
+    // option for this input rather than for the output.
+    ...(filtered && compose?.imagePath ? ['-i', compose.imagePath] : []),
     ...(endSec !== undefined ? ['-t', (endSec - startSec).toFixed(3)] : []),
-    ...buildMapAndMetadataArgs(options, hasAudio),
+    ...(filtered && compose?.graph ? ['-filter_complex', compose.graph] : []),
+    ...buildMapAndMetadataArgs(options, hasAudio, filtered),
     ...(copyMode ? ['-c:v', 'copy'] : buildVideoArgs(options)),
     ...(hasAudio && audioCodec !== 'none'
       ? buildAudioArgs(audioCodec, options.audioBitrateKbps)
@@ -256,11 +264,40 @@ export function resolveAudioCodec(options: ConvertOptions): AudioCodecId {
   return options.processingMode === 'copy' ? 'copy' : options.audioCodec
 }
 
-export function buildMapAndMetadataArgs(options: ConvertOptions, hasAudio: boolean): string[] {
+/** The pixel format the output codec will use, so compositing happens in that same format. */
+export function pixFmtOf(videoArgs: string[]): string | undefined {
+  const index = videoArgs.indexOf('-pix_fmt')
+  return index >= 0 ? videoArgs[index + 1] : undefined
+}
+
+export function workFormatForCodec(codec: CodecId): string | undefined {
+  const minimal = {
+    codec,
+    includeAlpha: false,
+    crf: undefined,
+    bitrateKbps: undefined
+  } as unknown as ConvertOptions
+  return pixFmtOf(buildVideoArgs(minimal))
+}
+
+/** The effects plan for one source, or null when stream-copying or when no effect is switched on. */
+export function composeForJob(options: ConvertOptions, src: Size): ComposePlan | null {
+  if (options.processingMode === 'copy' || !hasActiveEffects(options.effects)) return null
+  const plan = buildComposePlan(src, options.effects, {
+    workFormat: pixFmtOf(buildVideoArgs(options))
+  })
+  return plan.active ? plan : null
+}
+
+export function buildMapAndMetadataArgs(
+  options: ConvertOptions,
+  hasAudio: boolean,
+  filtered = false
+): string[] {
   const args: string[] = []
 
   // Map video, and audio only if present + requested.
-  args.push('-map', '0:v:0')
+  args.push('-map', filtered ? '[vout]' : '0:v:0')
   if (hasAudio && resolveAudioCodec(options) !== 'none') {
     args.push('-map', '0:a?')
   }

@@ -1,14 +1,19 @@
 import type {
   CodecDefinition,
   ConvertOptions,
+  Effects,
   OutputContainer,
   ProcessingMode
 } from '../../../shared/types'
+import { DEFAULT_EFFECTS, describeEffects, hasActiveEffects } from '../../../shared/compose'
 import { CONTAINERS, codecsForContainer, audioCodecsForContainer } from '../../../shared/codecDefinitions'
 
 interface Props {
   options: ConvertOptions
   onChange: (options: ConvertOptions) => void
+  onEditEffects: () => void
+  /** Why the current effects can't be used, if they can't. */
+  effectsError?: string
 }
 
 const GROUP_ORDER: CodecDefinition['group'][] = [
@@ -20,7 +25,7 @@ const GROUP_ORDER: CodecDefinition['group'][] = [
   'Uncompressed / Lossless'
 ]
 
-function OptionsPanel({ options, onChange }: Props): React.JSX.Element {
+function OptionsPanel({ options, onChange, onEditEffects, effectsError }: Props): React.JSX.Element {
   const update = (patch: Partial<ConvertOptions>): void => onChange({ ...options, ...patch })
 
   const availableCodecs = codecsForContainer(options.container)
@@ -33,6 +38,8 @@ function OptionsPanel({ options, onChange }: Props): React.JSX.Element {
   const audioBitrateValue = options.audioBitrateKbps ?? selectedAudioDef?.defaultBitrateKbps ?? 192
 
   const copyMode = options.processingMode === 'copy'
+  const effectsActive = hasActiveEffects(options.effects)
+  const effectSummary = describeEffects(options.effects)
 
   const handleModeChange = (processingMode: ProcessingMode): void => {
     // Matroska accepts almost any source codec, so it's the safest container for a stream copy.
@@ -180,6 +187,42 @@ function OptionsPanel({ options, onChange }: Props): React.JSX.Element {
       )}
         </>
       )}
+
+      <hr />
+
+      <div className="fx-summary">
+        <div className="fx-summary-head">
+          <span>Effects</span>
+          {effectsActive && !copyMode && (
+            <button
+              className="fx-reset"
+              onClick={() => update({ effects: JSON.parse(JSON.stringify(DEFAULT_EFFECTS)) as Effects })}
+            >
+              Reset
+            </button>
+          )}
+        </div>
+        {copyMode ? (
+          <p className="hint">
+            Effects need the video to be re-encoded. Switch Processing to Convert to use them.
+          </p>
+        ) : (
+          <>
+            <p className="hint">
+              {effectsActive
+                ? effectSummary.join(' · ')
+                : 'Resize, change the shape, blur, or add an image.'}
+            </p>
+            <button onClick={onEditEffects}>{effectsActive ? 'Edit effects…' : 'Add effects…'}</button>
+            {effectsError && <p className="trim-error">{effectsError}</p>}
+            {effectsActive && options.codec === 'dnxhd' && (
+              <p className="trim-error">
+                Legacy DNxHD only allows a few fixed frame sizes. Use a DNxHR profile with effects.
+              </p>
+            )}
+          </>
+        )}
+      </div>
 
       <label className="field checkbox">
         <input

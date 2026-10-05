@@ -7,7 +7,13 @@ import { setupAutoUpdater } from './updater'
 import { getContainerDefinition } from './codecs'
 import { createPreviewProxy, registerPreviewFile, startPreviewServer, stopPreview } from './preview'
 import { setupDownloader } from './ytdlp'
-import type { OutputContainer, ProbeResult, StartJobRequest } from '../shared/types'
+import { renderEffectsPreview, stopEffectsPreview } from './compose'
+import type {
+  EffectsPreviewRequest,
+  OutputContainer,
+  ProbeResult,
+  StartJobRequest
+} from '../shared/types'
 
 const KNOWN_EXTENSIONS = /\.(mov|mkv|mp4|avi|ts|m2ts|webm)$/i
 
@@ -71,6 +77,22 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
     })
     return result.canceled ? [] : result.filePaths
   })
+
+  ipcMain.handle('dialog:openImage', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Choose an image to overlay',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp'] },
+        { name: 'All files', extensions: ['*'] }
+      ]
+    })
+    return result.canceled ? null : result.filePaths[0]
+  })
+
+  ipcMain.handle('compose:preview', (_evt, request: EffectsPreviewRequest) =>
+    renderEffectsPreview(request)
+  )
 
   ipcMain.handle('dialog:chooseOutputDir', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -163,6 +185,7 @@ app.whenReady().then(async () => {
 })
 
 app.on('will-quit', stopPreview)
+app.on('will-quit', stopEffectsPreview)
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

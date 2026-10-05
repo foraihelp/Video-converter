@@ -95,8 +95,78 @@ export interface TrimRange {
   endSec?: number
 }
 
+/** 'original' leaves the size alone; 'preset' sets the shorter side; 'custom' uses width and/or height. */
+export type ResizeMode = 'original' | 'preset' | 'custom'
+
+export interface ResizeSettings {
+  mode: ResizeMode
+  /** Shorter side in pixels, when mode is 'preset' (so "1080" suits landscape and portrait alike). */
+  preset: number
+  /** Custom width / height. Leave one empty to keep the aspect ratio; set both for an exact frame. */
+  width?: number
+  height?: number
+}
+
+/** How the picture is fitted when the frame shape differs from the source's. */
+export type FitMode = 'bars' | 'fill' | 'blur'
+
+export interface ReformatSettings {
+  /** 'original' or a ratio such as '9:16'. */
+  aspect: string
+  fit: FitMode
+  /** Bar colour for the 'bars' fit, as #rrggbb. */
+  barColor: string
+}
+
+export type BlurMode = 'off' | 'full' | 'region'
+
+/** A rectangle expressed as a percentage of the output frame. */
+export interface BlurRegion {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+export interface BlurSettings {
+  mode: BlurMode
+  /** 1-100, relative to the frame size so it looks the same at 360p and 4K. */
+  strength: number
+  region: BlurRegion
+}
+
+export type OverlayAnchor =
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+  | 'middle-left'
+  | 'center'
+  | 'middle-right'
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right'
+
+export interface OverlaySettings {
+  enabled: boolean
+  imagePath?: string
+  anchor: OverlayAnchor
+  /** Image width as a percentage of the frame width. */
+  sizePct: number
+  opacityPct: number
+  /** Distance from the frame edge, as a percentage of the frame's shorter side. */
+  marginPct: number
+}
+
+export interface Effects {
+  resize: ResizeSettings
+  reformat: ReformatSettings
+  blur: BlurSettings
+  overlay: OverlaySettings
+}
+
 export interface ConvertOptions {
   processingMode: ProcessingMode
+  effects: Effects
   codec: CodecId
   container: OutputContainer
   includeAlpha: boolean
@@ -121,6 +191,9 @@ export interface QueueJob {
   durationSec?: number
   hasAudio?: boolean
   hasAlpha?: boolean
+  /** Picture size as displayed (already accounts for phone-style rotation). */
+  width?: number
+  height?: number
   /** Validated trim range to apply, if any. */
   trim?: TrimRange
 }
@@ -129,10 +202,26 @@ export interface ProbeResult {
   durationSec: number
   hasAudio: boolean
   hasAlpha: boolean
+  /** Picture size as displayed: swapped for clips flagged as rotated 90/270 degrees. */
   width?: number
   height?: number
   videoCodec?: string
 }
+
+export interface EffectsPreviewRequest {
+  inputPath: string
+  effects: Effects
+  /** Absolute position in the source, in seconds. */
+  timeSec: number
+  /** Longest side of the returned image, in pixels. */
+  maxSize: number
+  /** Pixel format of the output codec, so the preview composites exactly like the conversion. */
+  codec: CodecId
+}
+
+export type EffectsPreviewResult =
+  | { ok: true; dataUrl: string; frameWidth: number; frameHeight: number }
+  | { ok: false; error: string }
 
 export interface ProgressPayload {
   jobId: string
