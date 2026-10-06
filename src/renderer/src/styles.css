@@ -521,6 +521,21 @@ body {
   color: var(--accent-b);
 }
 
+.queue-edit-btn.active {
+  border-color: var(--accent-b);
+  color: var(--accent-b);
+}
+
+.queue-fx-badge {
+  max-width: 100%;
+}
+
+.queue-fx-badge span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .queue-trim-badge {
   display: inline-flex;
   align-items: center;
@@ -1337,12 +1352,129 @@ button.primary {
   opacity: 0.55;
 }
 
-.fx-region-box {
+.fx-image-wrap.editing {
+  touch-action: none;
+}
+
+.fx-image-wrap.editing:not(.drawing) {
+  cursor: pointer;
+}
+
+.fx-box {
   position: absolute;
+  box-sizing: border-box;
   border: 2px dashed #fff;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7);
   background: rgba(79, 140, 255, 0.14);
-  pointer-events: none;
+  cursor: move;
+  touch-action: none;
+}
+
+.fx-box.end {
+  border-color: #7dffb2;
+  background: rgba(125, 255, 178, 0.14);
+}
+
+.fx-box.faded {
+  opacity: 0.5;
+  border-style: dotted;
+}
+
+.fx-handle {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 2px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.fx-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fx-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fx-layer {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.fx-layer.selected {
+  border-color: var(--accent-b);
+}
+
+.fx-layer-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 4px;
+}
+
+.fx-layer-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 4px 8px;
+  text-align: left;
+  background: transparent;
+  border: none;
+}
+
+.fx-layer-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fx-layer-sub {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.fx-icon-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.fx-layer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 10px 12px;
+}
+
+.fx-timing {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.fx-time-buttons button {
+  padding: 3px 10px;
+  font-size: 12px;
 }
 
 .fx-spinner {
@@ -1357,4 +1489,8 @@ button.primary {
   text-align: center;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.fx-use-shared {
+  font-size: 12px;
 }

@@ -7,7 +7,7 @@ import { setupAutoUpdater } from './updater'
 import { getContainerDefinition } from './codecs'
 import { createPreviewProxy, registerPreviewFile, startPreviewServer, stopPreview } from './preview'
 import { setupDownloader } from './ytdlp'
-import { renderEffectsPreview, stopEffectsPreview } from './compose'
+import { probeOverlayImage, renderEffectsPreview, stopEffectsPreview } from './compose'
 import type {
   EffectsPreviewRequest,
   OutputContainer,
@@ -83,7 +83,7 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
       title: 'Choose an image to overlay',
       properties: ['openFile'],
       filters: [
-        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp'] },
+        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'] },
         { name: 'All files', extensions: ['*'] }
       ]
     })
@@ -93,6 +93,8 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
   ipcMain.handle('compose:preview', (_evt, request: EffectsPreviewRequest) =>
     renderEffectsPreview(request)
   )
+
+  ipcMain.handle('compose:imageInfo', (_evt, imagePath: string) => probeOverlayImage(imagePath))
 
   ipcMain.handle('dialog:chooseOutputDir', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {

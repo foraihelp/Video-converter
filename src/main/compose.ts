@@ -4,18 +4,29 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { extname, isAbsolute, join } from 'node:path'
 import {
+  IMAGE_EXTENSIONS,
   buildComposePlan,
+  composeInputArgs,
   hasActiveEffects,
   validateEffects,
   type ComposePlan,
   type Size
 } from '../shared/compose'
 import { composeForJob, workFormatForCodec } from './codecs'
-import { getFfmpegPath } from './ffmpegPaths'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+import { getFfmpegPath, getFfprobePath } from './ffmpegPaths'
 import { probeFile } from './probe'
-import type { ConvertOptions, EffectsPreviewRequest, EffectsPreviewResult, ProbeResult } from '../shared/types'
+import type {
+  ConvertOptions,
+  Effects,
+  EffectsPreviewRequest,
+  EffectsPreviewResult,
+  ProbeResult
+} from '../shared/types'
 
-const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.bmp'])
+const execFileAsync = promisify(execFile)
+const IMAGE_EXTENSION_SET = new Set(IMAGE_EXTENSIONS)
 
 /**
  * The overlay path ends up as an ffmpeg input, so it must be a plain local image file: an absolute
@@ -23,13 +34,23 @@ const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.bmp'])
  */
 export function checkOverlayImage(imagePath: string | undefined): string | undefined {
   if (!imagePath) return 'No overlay image was chosen.'
-  if (!isAbsolute(imagePath) || !IMAGE_EXTENSIONS.has(extname(imagePath).toLowerCase())) {
-    return 'The overlay must be a PNG, JPG, WebP or BMP image file.'
+  if (!isAbsolute(imagePath) || !IMAGE_EXTENSION_SET.has(extname(imagePath).toLowerCase())) {
+    return 'An image must be a PNG, JPG, WebP, BMP or GIF file.'
   }
   try {
     if (!existsSync(imagePath) || !statSync(imagePath).isFile()) throw new Error('missing')
   } catch {
     return `The overlay image couldn’t be found: ${imagePath}`
+  }
+  return undefined
+}
+
+/** Checks every image layer's file; the first problem found is returned. */
+export function checkLayerImages(fx: Effects): string | undefined {
+  for (const layer of fx.layers) {
+    if (layer.kind !== 'image') continue
+    const problem = checkOverlayImage(layer.imagePath)
+    if (problem) return problem
   }
   return undefined
 }
@@ -51,10 +72,8 @@ export function prepareCompose(options: ConvertOptions, probe: ProbeResult | nul
 
   const sizeError = validateEffects(fx, size)
   if (sizeError) return { error: sizeError }
-  if (fx.overlay.enabled) {
-    const imageError = checkOverlayImage(fx.overlay.imagePath)
-    if (imageError) return { error: imageError }
-  }
+  const imageError = checkLayerImages(fx)
+  if (imageError) return { error: imageError }
   return { plan: composeForJob(options, size) }
 }
 
@@ -80,14 +99,13 @@ export async function renderEffectsPreview(req: EffectsPreviewRequest): Promise<
   const size: Size = { w: probe.width, h: probe.height }
   const sizeError = validateEffects(req.effects, size)
   if (sizeError) return { ok: false, error: sizeError }
-  if (req.effects.overlay.enabled) {
-    const imageError = checkOverlayImage(req.effects.overlay.imagePath)
-    if (imageError) return { ok: false, error: imageError }
-  }
+  const imageError = checkLayerImages(req.effects)
+  if (imageError) return { ok: false, error: imageError }
 
   const plan = buildComposePlan(size, req.effects, {
     workFormat: workFormatForCodec(req.codec),
-    previewMaxSize: Math.min(Math.max(req.maxSize, 64), 2048)
+    previewMaxSize: Math.min(Math.max(req.maxSize, 64), 2048),
+    atClipTime: Number.isFinite(req.clipTimeSec) ? Math.max(0, req.clipTimeSec) : 0
   })
   if (!plan.graph) return { ok: false, error: 'Nothing to preview.' }
 
@@ -102,7 +120,7 @@ export async function renderEffectsPreview(req: EffectsPreviewRequest): Promise<
     req.timeSec.toFixed(3),
     '-i',
     req.inputPath,
-    ...(plan.imagePath ? ['-i', plan.imagePath] : []),
+    ...composeInputArgs(plan),
     '-filter_complex',
     plan.graph,
     '-map',
@@ -151,6 +169,32 @@ export async function renderEffectsPreview(req: EffectsPreviewRequest): Promise<
     return { ok: false, error: lastLine ?? 'Couldn’t render a preview frame.' }
   } finally {
     rmSync(output, { force: true })
+  }
+}
+
+/** The pixel size of an overlay image, so the editor can draw a box of the right shape. */
+export async function probeOverlayImage(
+  imagePath: string
+): Promise<{ ok: true; width: number; height: number } | { ok: false; error: string }> {
+  const problem = checkOverlayImage(imagePath)
+  if (problem) return { ok: false, error: problem }
+  try {
+    const { stdout } = await execFileAsync(getFfprobePath(), [
+      '-v',
+      'error',
+      '-select_streams',
+      'v:0',
+      '-show_entries',
+      'stream=width,height',
+      '-of',
+      'json',
+      imagePath
+    ])
+    const stream = (JSON.parse(stdout) as { streams?: Array<{ width?: number; height?: number }> }).streams?.[0]
+    if (!stream?.width || !stream?.height) return { ok: false, error: 'Couldn’t read that image.' }
+    return { ok: true, width: stream.width, height: stream.height }
+  } catch {
+    return { ok: false, error: 'Couldn’t read that image.' }
   }
 }
 

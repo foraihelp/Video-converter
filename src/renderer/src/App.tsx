@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ConvertOptions, QueueJob, TrimRange, UpdateStatus } from '../../shared/types'
+import type { ConvertOptions, Effects, QueueJob, TrimRange, UpdateStatus } from '../../shared/types'
 import { getCodecDefinition } from '../../shared/codecDefinitions'
 import { DEFAULT_EFFECTS, hasActiveEffects, validateEffects } from '../../shared/compose'
 import OptionsPanel from './components/OptionsPanel'
@@ -24,6 +24,7 @@ function App(): React.JSX.Element {
   const [appVersion, setAppVersion] = useState<string | null>(null)
   const [playerJobId, setPlayerJobId] = useState<string | null>(null)
   const [effectsOpen, setEffectsOpen] = useState(false)
+  const [effectsJobId, setEffectsJobId] = useState<string | null>(null)
   const [view, setView] = useState<'convert' | 'download'>('convert')
 
   const [options, setOptions] = useState<ConvertOptions>({
@@ -190,6 +191,10 @@ function App(): React.JSX.Element {
     setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, trim } : j)))
   }, [])
 
+  const handleJobEffectsChange = useCallback((id: string, effects: Effects | undefined) => {
+    setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, effects } : j)))
+  }, [])
+
   const handleCancelJob = useCallback((id: string) => {
     cancelRequested.current.add(id)
     void window.api.cancelConversion(id)
@@ -204,6 +209,7 @@ function App(): React.JSX.Element {
 
       const jobOptions: ConvertOptions = {
         ...options,
+        effects: job.effects ?? options.effects,
         includeAlpha: options.includeAlpha && codecDef.supportsAlpha
       }
 
@@ -235,16 +241,25 @@ function App(): React.JSX.Element {
   const playerJob = jobs.find((j) => j.id === playerJobId) ?? null
   // Effects are checked against every queued video's real size, not just the settings in isolation.
   const effectsError = ((): string | undefined => {
-    if (options.processingMode === 'copy' || !hasActiveEffects(options.effects)) return undefined
-    const settingsProblem = validateEffects(options.effects)
-    if (settingsProblem) return settingsProblem
-    for (const job of jobs) {
-      if (job.status === 'done' || job.status === 'running' || !job.width || !job.height) continue
-      const problem = validateEffects(options.effects, { w: job.width, h: job.height })
+    if (options.processingMode === 'copy') return undefined
+    const waiting = jobs.filter((j) => j.status !== 'done' && j.status !== 'running')
+    // The shared effects only matter while some waiting file (or none yet) still uses them.
+    if (hasActiveEffects(options.effects) && (waiting.length === 0 || waiting.some((j) => !j.effects))) {
+      const settingsProblem = validateEffects(options.effects)
+      if (settingsProblem) return settingsProblem
+    }
+    for (const job of waiting) {
+      const fx = job.effects ?? options.effects
+      if (!hasActiveEffects(fx)) continue
+      const problem = validateEffects(
+        fx,
+        job.width && job.height ? { w: job.width, h: job.height } : undefined
+      )
       if (problem) return `${job.inputName}: ${problem}`
     }
     return undefined
   })()
+  const effectsJob = jobs.find((j) => j.id === effectsJobId) ?? null
 
   return (
     <div className="app">
@@ -347,6 +362,13 @@ function App(): React.JSX.Element {
             onRename={handleRenameOutput}
             onOpenPlayer={setPlayerJobId}
             onClearTrim={(id) => handleTrimChange(id, undefined)}
+            onEditEffects={setEffectsJobId}
+            onClearEffects={(id) => handleJobEffectsChange(id, undefined)}
+            effectsUnavailable={
+              options.processingMode === 'copy'
+                ? 'Effects need the video to be re-encoded. Switch Processing to Convert.'
+                : undefined
+            }
           />
 
           <div className="actions-row">
@@ -379,12 +401,29 @@ function App(): React.JSX.Element {
           <OptionsPanel
             options={options}
             onChange={setOptions}
-            onEditEffects={() => setEffectsOpen(true)}
+            onEditEffects={() => {
+              setEffectsJobId(null)
+              setEffectsOpen(true)
+            }}
             effectsError={effectsError}
           />
         </div>
       </div>
 
+      {effectsJob && (
+        <EffectsDialog
+          key={effectsJob.id}
+          effects={effectsJob.effects ?? options.effects}
+          codec={options.codec}
+          jobs={[effectsJob]}
+          title={`Effects for ${effectsJob.inputName}`}
+          onChange={(effects) => handleJobEffectsChange(effectsJob.id, effects)}
+          onUseShared={
+            effectsJob.effects ? () => handleJobEffectsChange(effectsJob.id, undefined) : undefined
+          }
+          onClose={() => setEffectsJobId(null)}
+        />
+      )}
       {effectsOpen && (
         <EffectsDialog
           effects={options.effects}

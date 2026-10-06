@@ -118,8 +118,6 @@ export interface ReformatSettings {
   barColor: string
 }
 
-export type BlurMode = 'off' | 'full' | 'region'
-
 /** A rectangle expressed as a percentage of the output frame. */
 export interface BlurRegion {
   x: number
@@ -128,10 +126,25 @@ export interface BlurRegion {
   h: number
 }
 
-export interface BlurSettings {
-  mode: BlurMode
-  /** 1-100, relative to the frame size so it looks the same at 360p and 4K. */
+export type BlurStyle = 'blur' | 'pixelate' | 'box'
+
+/** When a layer is on screen. Times count from the start of the converted clip (after any trim). */
+export interface LayerTiming {
+  /** Leave empty to start with the video. */
+  startSec?: number
+  /** Leave empty to stay until the end. */
+  endSec?: number
+}
+
+/** Hides part (or all) of the picture: blurred, pixelated, or covered by a solid box. */
+export interface BlurLayer extends LayerTiming {
+  id: string
+  kind: 'blur'
+  style: BlurStyle
+  /** 1-100 for blur and pixelate, relative to the frame size so it looks alike at 360p and 4K. */
   strength: number
+  /** Fill colour for the 'box' style, as #rrggbb. */
+  color: string
   region: BlurRegion
 }
 
@@ -146,22 +159,28 @@ export type OverlayAnchor =
   | 'bottom-center'
   | 'bottom-right'
 
-export interface OverlaySettings {
-  enabled: boolean
+/** A picture (logo, sticker, animated GIF) placed on the video. */
+export interface ImageLayer extends LayerTiming {
+  id: string
+  kind: 'image'
   imagePath?: string
-  anchor: OverlayAnchor
+  /** Top-left corner, as a percentage of the output frame. */
+  x: number
+  y: number
   /** Image width as a percentage of the frame width. */
-  sizePct: number
+  widthPct: number
   opacityPct: number
-  /** Distance from the frame edge, as a percentage of the frame's shorter side. */
-  marginPct: number
+  /** When set, the image glides to this top-left position between its start and end times. */
+  moveTo?: { x: number; y: number }
 }
+
+export type Layer = BlurLayer | ImageLayer
 
 export interface Effects {
   resize: ResizeSettings
   reformat: ReformatSettings
-  blur: BlurSettings
-  overlay: OverlaySettings
+  /** Drawn in order: later layers sit on top of (and blur) earlier ones. */
+  layers: Layer[]
 }
 
 export interface ConvertOptions {
@@ -196,6 +215,8 @@ export interface QueueJob {
   height?: number
   /** Validated trim range to apply, if any. */
   trim?: TrimRange
+  /** This file's own effects. When set they replace the shared ones for this file. */
+  effects?: Effects
 }
 
 export interface ProbeResult {
@@ -213,6 +234,8 @@ export interface EffectsPreviewRequest {
   effects: Effects
   /** Absolute position in the source, in seconds. */
   timeSec: number
+  /** The same moment counted from the start of the converted clip, which is what layer times use. */
+  clipTimeSec: number
   /** Longest side of the returned image, in pixels. */
   maxSize: number
   /** Pixel format of the output codec, so the preview composites exactly like the conversion. */

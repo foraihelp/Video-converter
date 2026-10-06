@@ -213,6 +213,7 @@ function OptionsPanel({ options, onChange, onEditEffects, effectsError }: Props)
                 ? effectSummary.join(' · ')
                 : 'Resize, change the shape, blur, or add an image.'}
             </p>
+            <p className="hint">Applies to every file. Use Edit on a file to give just that file its own.</p>
             <button onClick={onEditEffects}>{effectsActive ? 'Edit effects…' : 'Add effects…'}</button>
             {effectsError && <p className="trim-error">{effectsError}</p>}
             {effectsActive && options.codec === 'dnxhd' && (

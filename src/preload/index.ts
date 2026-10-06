@@ -31,6 +31,10 @@ const api = {
   openFileDialog: (): Promise<string[]> => ipcRenderer.invoke('dialog:openFiles'),
   chooseOutputDir: (): Promise<string | null> => ipcRenderer.invoke('dialog:chooseOutputDir'),
   chooseOverlayImage: (): Promise<string | null> => ipcRenderer.invoke('dialog:openImage'),
+  probeOverlayImage: (
+    imagePath: string
+  ): Promise<{ ok: true; width: number; height: number } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('compose:imageInfo', imagePath),
   renderEffectsPreview: (request: EffectsPreviewRequest): Promise<EffectsPreviewResult> =>
     ipcRenderer.invoke('compose:preview', request),
   probeFile: (filePath: string): Promise<ProbeResult | null> =>

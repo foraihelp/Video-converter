@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { QueueJob } from '../../../shared/types'
 import { formatTimecode, trimmedDuration } from '../../../shared/time'
+import { describeEffects, hasActiveEffects } from '../../../shared/compose'
 
 interface Props {
   jobs: QueueJob[]
@@ -9,6 +10,10 @@ interface Props {
   onRename: (id: string, newBaseName: string) => void
   onOpenPlayer: (id: string) => void
   onClearTrim: (id: string) => void
+  onEditEffects: (id: string) => void
+  onClearEffects: (id: string) => void
+  /** Why per-file effects can't be edited right now (e.g. Fast copy), if they can't. */
+  effectsUnavailable?: string
 }
 
 function trimSummary(job: QueueJob): string | null {
@@ -36,6 +41,36 @@ function ScissorsIcon(): React.JSX.Element {
       <line x1="8.12" y1="8.12" x2="12" y2="12" />
     </svg>
   )
+}
+
+function SlidersIcon(): React.JSX.Element {
+  return (
+    <svg
+      className="btn-icon-sm"
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="4" y1="21" x2="4" y2="14" />
+      <line x1="4" y1="10" x2="4" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12" y2="3" />
+      <line x1="20" y1="21" x2="20" y2="16" />
+      <line x1="20" y1="12" x2="20" y2="3" />
+      <line x1="1" y1="14" x2="7" y2="14" />
+      <line x1="9" y1="8" x2="15" y2="8" />
+      <line x1="17" y1="16" x2="23" y2="16" />
+    </svg>
+  )
+}
+
+function effectsBadgeText(job: QueueJob): string | null {
+  if (!job.effects) return null
+  return hasActiveEffects(job.effects)
+    ? describeEffects(job.effects).join(' · ')
+    : 'No effects (ignores the shared effects)'
 }
 
 function statusLabel(job: QueueJob): string {
@@ -133,7 +168,10 @@ function QueueTable({
   onCancel,
   onRename,
   onOpenPlayer,
-  onClearTrim
+  onClearTrim,
+  onEditEffects,
+  onClearEffects,
+  effectsUnavailable
 }: Props): React.JSX.Element {
   if (jobs.length === 0) {
     return <p className="empty-queue">No files added yet.</p>
@@ -174,7 +212,37 @@ function QueueTable({
               )}
             </div>
           )}
+          {job.effects && (
+            <div className="queue-trim-badge queue-fx-badge">
+              <SlidersIcon />
+              <span>{effectsBadgeText(job)}</span>
+              {job.status !== 'running' && job.status !== 'done' && (
+                <button
+                  className="queue-trim-clear"
+                  title="Use the shared effects for this file"
+                  aria-label="Use the shared effects for this file"
+                  onClick={() => onClearEffects(job.id)}
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+          )}
           <div className="queue-row-actions">
+            <button
+              className={`queue-edit-btn ${job.effects ? 'active' : ''}`}
+              disabled={
+                job.status === 'probing' ||
+                job.status === 'running' ||
+                job.status === 'done' ||
+                !!effectsUnavailable
+              }
+              title={effectsUnavailable ?? 'Resize, reformat, blur or add an image — for this file only'}
+              onClick={() => onEditEffects(job.id)}
+            >
+              <SlidersIcon />
+              Edit
+            </button>
             <button
               className={`queue-trim-btn ${job.trim ? 'active' : ''}`}
               disabled={job.status === 'probing'}

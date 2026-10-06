@@ -3,7 +3,13 @@ import {
   getAudioCodecDefinition,
   getContainerDefinition
 } from '../shared/codecDefinitions'
-import { buildComposePlan, hasActiveEffects, type ComposePlan, type Size } from '../shared/compose'
+import {
+  buildComposePlan,
+  composeInputArgs,
+  hasActiveEffects,
+  type ComposePlan,
+  type Size
+} from '../shared/compose'
 import type { AudioCodecId, CodecId, ConvertOptions, TrimRange } from '../shared/types'
 
 export {
@@ -238,9 +244,9 @@ export function buildConvertArgs(params: {
     ...(startSec > 0 ? ['-ss', startSec.toFixed(3)] : []),
     '-i',
     inputPath,
-    // Input 1 is the overlay image. It must come before -t, which would otherwise be read as an
-    // option for this input rather than for the output.
-    ...(filtered && compose?.imagePath ? ['-i', compose.imagePath] : []),
+    // Inputs 1, 2, ... are the overlay images. They must come before -t, which would otherwise be
+    // read as an option for the last input rather than for the output.
+    ...(filtered ? composeInputArgs(compose) : []),
     ...(endSec !== undefined ? ['-t', (endSec - startSec).toFixed(3)] : []),
     ...(filtered && compose?.graph ? ['-filter_complex', compose.graph] : []),
     ...buildMapAndMetadataArgs(options, hasAudio, filtered),
